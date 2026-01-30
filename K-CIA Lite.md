@@ -43,7 +43,7 @@
 * **요구사항:** 성수동 상권을 육각형(Hexagon) 그리드로 나누어 시각화.
 * **상세 로직:**
   * **Elevation (높이):** 유동 인구 수 또는 추정 매출액 반영.
-  * **Color (색상):** 유튜브 댓글 감성 분석 결과 (-1.0 ≤ score ≤ 1.0)를 반영하여 붉은색(부정)~녹색(긍정)으로 표현.
+  * **Color (색상):** MVP에서는 매출증감률(QoQ)을 반영하여 붉은색(감소)~녹색(증가)으로 표현. 유튜브 모듈 활성화 시 감성 점수(-1.0~1.0)로 전환 가능.
   * **Interaction:** 그리드 클릭 시 해당 구역의 요약 지표 사이드바 노출.
 
 ### **FR-2: 랭그래프(LangGraph) 기반 AI 챗봇**
@@ -72,7 +72,8 @@
 | **Backend** | Python (FastAPI/LangChain) | LLM 오케스트레이션 및 API 관리 |
 | **AI Framework** | LangGraph | 순환형 에이전트 워크플로우 제어 |
 | **Chat** | Vercel AI SDK | GPT 스트리밍 응답 지원 |
-| **Database** | Supabase (PostgreSQL) | 관계형 데이터 + 벡터 데이터(pgvector) |
+| **Database** | Supabase (PostgreSQL + PostGIS + pgvector) | 관계형 + 공간 + 벡터 데이터 |
+| **Content Gen** | Gemini Nano Banana | 4컷 만화/쇼츠 콘텐츠 생성 (Phase 4) |
 | **Data Source** | Seoul Open Data, YouTube API | 정량/정성 데이터 하이브리드 수집 |
 | **Deploy** | Vercel | 무료 티어, 자동 CI/CD, 엣지 함수 지원 |
 
@@ -103,7 +104,7 @@
 핵심 메타포:
 
 * **높이(Elevation):** 유동인구 또는 매출
-* **색(Color):** 유튜브 감성 점수(긍/부정)
+* **색(Color):** MVP: 매출증감률(QoQ), 유튜브 모듈 ON 시: 감성 점수(긍/부정)
 
 Deck.gl은 다음 레이어로 이를 직접 지원한다:
 
@@ -135,17 +136,17 @@ Deck.gl은 다음 레이어로 이를 직접 지원한다:
 **사이드바 요약 로딩:**
 
 ```
-GET /api/blocks/{hex_id}/summary?quarter=2025Q4&industry=cafe
+GET /api/map/hexagon/{h3_index}?qtr=2025Q4&category=cafe
 ```
 
 **AI 질의:**
 
 ```
-POST /api/agent/query
-payload: { question, hex_id, filters, recent_youtube_summary_ids }
+POST /api/chat
+payload: { question, h3_index, filters }
 ```
 
-백엔드는 LangGraph Supervisor가 필요한 워커(SQL/감성/경쟁도)를 호출하고, 결과를 합쳐 응답
+백엔드는 LangGraph Supervisor가 필요한 워커(SQL Agent/Insight Agent)를 호출하고, 결과를 합쳐 응답
 
 **중요한 설계 원칙:**
 

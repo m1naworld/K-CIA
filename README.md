@@ -15,34 +15,47 @@
 
 | 영역 | 기술 |
 |------|------|
-| Frontend | Next.js 14 (App Router), Deck.gl, TailwindCSS, shadcn/ui |
-| Backend | Python 3.11+, FastAPI, LangGraph, LangChain |
-| AI | OpenAI GPT-4o, Vercel AI SDK |
-| Database | Supabase (PostgreSQL + PostGIS + pgvector) |
+| Frontend | Next.js 14 (App Router), Deck.gl, TailwindCSS, shadcn/ui, Recharts |
 | State | Zustand |
+| Backend | Python 3.11+, FastAPI, LangGraph, LangChain |
+| AI | OpenAI GPT-4o-mini (→ 4o 에스컬레이션), Vercel AI SDK |
+| Content Gen | Gemini Nano Banana (4컷 만화/쇼츠 — Phase 4) |
+| Database | Supabase (PostgreSQL + PostGIS + pgvector) |
 
 ## 프로젝트 구조
 
 ```
 K-CIA/
-├── docs/               # 프로젝트 문서
-│   ├── PLAN.md          # 실행 계획서
-│   ├── TODO.md          # 작업 티켓
-│   ├── PROGRESS.md      # 진행상황 로그
-│   └── DECISIONS.md     # 의사결정 로그
-├── frontend/            # Next.js 앱 (구현 예정)
-├── backend/             # FastAPI 서버 (구현 예정)
-├── etl/                 # 데이터 파이프라인 (구현 예정)
-└── tests/               # 테스트
+├── CLAUDE.md                          # AI 어시스턴트 가이드
+├── K-CIA Lite.md                      # PRD
+├── K-CIA_Lite_UserScenarios.md        # 유저 시나리오 8개
+├── K-CIA_Lite_DataPlan.md             # 데이터 기획
+├── K-CIA_Lite_DataIngestionPlan.md    # 데이터 수집 계획
+├── docs/
+│   ├── PLAN.md                        # 실행 계획서
+│   ├── TODO.md                        # 작업 티켓
+│   ├── PROGRESS.md                    # 진행상황 로그
+│   ├── DECISIONS.md                   # 의사결정 로그
+│   └── ui.md                          # UI 코딩 표준
+├── frontend/                          # Next.js 앱 (구현 예정)
+├── backend/                           # FastAPI 서버 (구현 예정)
+├── etl/                               # 데이터 파이프라인 (구현 예정)
+└── tests/                             # 테스트
 ```
 
 ## 문서
 
-- [PRD](K-CIA%20Lite.md) — 제품 요구사항
-- [유저 시나리오](K-CIA_Lite_UserScenarios.md) — 8개 시나리오 상세
-- [데이터 기획](K-CIA_Lite_DataPlan.md) — 데이터 소스/스키마/LLM 설계
-- [데이터 수집 계획](K-CIA_Lite_DataIngestionPlan.md) — 수집 파이프라인 상세
-- [실행 계획](docs/PLAN.md) — 마일스톤/데이터 최소셋/확장 로드맵
+| 문서 | 내용 |
+|------|------|
+| [PRD](K-CIA%20Lite.md) | 제품 요구사항 |
+| [유저 시나리오](K-CIA_Lite_UserScenarios.md) | 8개 시나리오 상세 (6단계 + 데이터 설계) |
+| [데이터 기획](K-CIA_Lite_DataPlan.md) | 데이터 소스/스키마/LLM 설계 |
+| [데이터 수집 계획](K-CIA_Lite_DataIngestionPlan.md) | 수집 파이프라인 상세 |
+| [실행 계획](docs/PLAN.md) | 마일스톤/데이터 최소셋/확장 로드맵 |
+| [작업 티켓](docs/TODO.md) | M0~M4 실행용 티켓 |
+| [진행상황](docs/PROGRESS.md) | 진행 로그/블로커/다음 액션 |
+| [의사결정 로그](docs/DECISIONS.md) | 확정된 결정사항과 근거 |
+| [UI 코딩 표준](docs/ui.md) | shadcn/ui, date-fns, 도메인 컴포넌트 규칙 |
 
 ## 현재 상태
 

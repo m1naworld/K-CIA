@@ -99,11 +99,23 @@ import { formatDate } from '@/lib/utils';
 // Output: "1st Sep 2025"
 ```
 
+## K-CIA Domain Components (Exception)
+
+The "no custom components" rule applies to **general UI primitives** (buttons, inputs, dialogs, etc.). The following **domain-specific components** are allowed because shadcn/ui does not provide equivalents:
+
+- `HexMap.tsx` — Deck.gl 3D hexagon map (no shadcn equivalent)
+- `AsOfBadge.tsx` — Data freshness indicator badge
+- `MetricCard.tsx` — Hex detail metric card with QoQ mini-chart
+- `FilterPanel.tsx` — Map filter controls (composed from shadcn/ui primitives)
+- `ChatPanel.tsx` — AI chat interface (uses Vercel AI SDK)
+
+**Rule:** Domain components must be built **using shadcn/ui primitives internally** wherever possible (e.g., Card, Badge, Select inside FilterPanel). Only create custom rendering when no shadcn/ui component exists (e.g., Deck.gl canvas).
+
 ## Summary
 
 | Category | Standard |
 |----------|----------|
-| UI Components | shadcn/ui ONLY |
-| Custom Components | NOT ALLOWED |
+| UI Components | shadcn/ui ONLY (for general primitives) |
+| Domain Components | Allowed (HexMap, AsOfBadge, MetricCard, etc.) |
 | Date Library | date-fns |
 | Date Format | `1st Sep 2025` |

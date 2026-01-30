@@ -212,7 +212,7 @@
 |------|------|
 | **목적** | 핵심 시각화 — 3D 헥사곤 맵 |
 | **작업** | Deck.gl ColumnLayer(H3), elevation=유동/매출, color=매출증감(QoQ). react-map-gl 기본 맵 타일 |
-| **산출물** | `frontend/src/components/HexMap.tsx` |
+| **산출물** | `frontend/src/components/map/HexMap.tsx` |
 | **의존성** | M2-1 |
 | **리스크** | Deck.gl 초기 로딩 → 데이터 경량화, 레이지 로딩 |
 | **DoD** | 브라우저에서 3D 맵 렌더링 < 3초 |
@@ -223,7 +223,7 @@
 |------|------|
 | **목적** | 업종/분기/영역 기준 필터링 |
 | **작업** | 좌측 패널: 업종 셀렉트, 분기 셀렉트, 행정동/상권 토글. Zustand 상태 관리 |
-| **산출물** | `frontend/src/components/FilterPanel.tsx`, `frontend/src/store/` |
+| **산출물** | `frontend/src/components/filters/FilterPanel.tsx`, `frontend/src/store/` |
 | **의존성** | M2-2 |
 | **리스크** | 낮음 |
 | **DoD** | 토글 전환 시 맵 데이터 갱신 |
@@ -234,7 +234,7 @@
 |------|------|
 | **목적** | 선택 구역 상세 정보 표시 |
 | **작업** | Hex 클릭 이벤트 → `/api/map/hexagon/{h3}` 호출 → 사이드바에 카드 6개(유동/매출/경쟁/성장/리스크/추천) + QoQ 미니차트(Recharts) + as-of 배지 |
-| **산출물** | `frontend/src/components/Sidebar.tsx`, `frontend/src/components/MetricCard.tsx` |
+| **산출물** | `frontend/src/components/sidebar/Sidebar.tsx`, `frontend/src/components/sidebar/MetricCard.tsx` |
 | **의존성** | M2-1, M3-1 |
 | **리스크** | 낮음 |
 | **DoD** | Hex 클릭 → 사이드바 열림, 6개 카드 데이터 표시 |
@@ -245,7 +245,7 @@
 |------|------|
 | **목적** | AI 챗봇 인터페이스 |
 | **작업** | Vercel AI SDK 기반 챗 패널. 스트리밍 응답 렌더링. 구조화 응답(근거카드/리스크/추천/체크리스트) 커스텀 렌더링 |
-| **산출물** | `frontend/src/components/ChatPanel.tsx` |
+| **산출물** | `frontend/src/components/chat/ChatPanel.tsx` |
 | **의존성** | M2-4 |
 | **리스크** | Vercel AI SDK와 FastAPI SSE 호환 확인 필요 |
 | **DoD** | 챗봇 질의 → 스트리밍 응답 표시, 구조화 카드 렌더링 |
@@ -256,7 +256,7 @@
 |------|------|
 | **목적** | 데이터 후행성 UX 반영 |
 | **작업** | `AsOfBadge` 컴포넌트 (분기/월/실시간 구분 색상), 후행성 경고 배너, (Should) D11 실시간 확인 버튼 |
-| **산출물** | `frontend/src/components/AsOfBadge.tsx` |
+| **산출물** | `frontend/src/components/common/AsOfBadge.tsx` |
 | **의존성** | M3-3 |
 | **리스크** | 낮음 |
 | **DoD** | 모든 카드에 as-of 배지 표시 |

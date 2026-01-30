@@ -64,7 +64,7 @@
 | **작업 체크리스트** | |
 | | - [ ] 모노레포 디렉토리 구조 확정 (`frontend/`, `backend/`, `etl/`, `docs/`) |
 | | - [ ] `docker-compose.yml` 작성 (Postgres/Supabase local, FastAPI, Next.js dev) |
-| | - [ ] `.env.example` 작성 (SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY, SEOUL_API_KEY) |
+| | - [ ] `.env.example` 작성 (SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY, SEOUL_API_KEY, MAPBOX_TOKEN, NEXT_PUBLIC_API_URL) |
 | | - [ ] Next.js 14 프로젝트 초기화 (App Router + TailwindCSS + shadcn/ui) |
 | | - [ ] FastAPI 프로젝트 스켈레톤 (health check endpoint) |
 | | - [ ] DB 마이그레이션 도구 선정 (Alembic 또는 Supabase migrations) |

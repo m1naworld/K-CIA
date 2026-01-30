@@ -10,7 +10,7 @@
 |------|------|
 | PLAN.md | 작성 완료 (A~D 섹션 + ASSUMPTIONS) |
 | TODO.md | 작성 완료 (M0~M4, 티켓 20개) |
-| DECISIONS.md | 작성 완료 (DEC-001~006, 6개 결정) |
+| DECISIONS.md | 작성 완료 (DEC-001~007, 7개 결정) |
 | PROGRESS.md | 현재 문서 (초기 로그) |
 
 ### 완료한 작업
@@ -22,7 +22,7 @@
 - [x] 시나리오 1 중심 실행 계획 수립
 - [x] 데이터 최소셋(Must/Should/Could) 분류
 - [x] 마일스톤별 작업 티켓 생성
-- [x] 핵심 의사결정 6건 기록
+- [x] 핵심 의사결정 7건 기록 (DEC-007: Gemini Nano Banana 추가)
 
 ### 데이터 수집/적재 상태
 
