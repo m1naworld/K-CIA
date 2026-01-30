@@ -56,7 +56,8 @@ K-CIA/
 ├── K-CIA Lite.md          # 초기 기획서
 ├── docs/
 │   ├── PRD.md             # Product Requirements Document
-│   └── TRD.md             # Technical Requirements Document
+│   ├── TRD.md             # Technical Requirements Document
+│   └── ui.md              # UI/UX 설계 명세 (필수 참고)
 ├── frontend/              # Next.js 앱 (구현 예정)
 │   ├── app/               # App Router 페이지
 │   ├── components/        # React 컴포넌트
@@ -298,7 +299,10 @@ SQL Agent  Sentiment    Summary
 
 - [PRD.md](docs/PRD.md) - 제품 요구사항 상세
 - [TRD.md](docs/TRD.md) - 기술 요구사항 상세
+- [ui.md](docs/ui.md) - **UI/UX 설계 명세 (프론트엔드 구현 시 필수 참고)**
 - [K-CIA Lite.md](K-CIA%20Lite.md) - 초기 기획서
+
+> **중요**: 프론트엔드 UI 컴포넌트 개발 시 반드시 `docs/ui.md` 문서를 참고하세요. 이 문서에는 화면 구성, 컴포넌트 설계, 인터랙션 명세가 포함되어 있습니다.
 
 ---
 
