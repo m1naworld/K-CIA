@@ -64,11 +64,24 @@
 
 | 구분 | 기술 스택 | 비고 |
 | :---- | :---- | :---- |
-| **Frontend** | Streamlit, PyDeck | 빠른 시각화 및 파이썬 기반 개발 |
+| **Frontend** | Next.js 14 (App Router), Deck.gl + react-map-gl | 완전한 UI/UX 제어권, 강력한 3D 맵 인터랙션 |
+| **UI/Style** | TailwindCSS + shadcn/ui, Recharts | 세련된 컴포넌트, 반응형 차트 |
+| **State** | Zustand | 경량 상태 관리 |
 | **Backend** | Python (FastAPI/LangChain) | LLM 오케스트레이션 및 API 관리 |
 | **AI Framework** | LangGraph | 순환형 에이전트 워크플로우 제어 |
+| **Chat** | Vercel AI SDK | GPT 스트리밍 응답 지원 |
 | **Database** | Supabase (PostgreSQL) | 관계형 데이터 \+ 벡터 데이터(pgvector) |
 | **Data Source** | Seoul Open Data, YouTube API | 정량/정성 데이터 하이브리드 수집 |
+| **Deploy** | Vercel | 무료 티어, 자동 CI/CD, 엣지 함수 지원 |
+
+### **프론트엔드 전환 근거**
+
+기존 Streamlit + PyDeck 스택은 빠른 프로토타이핑에 유리하나, K-CIA의 핵심 요구사항(3D 맵 클릭 인터랙션, 실시간 챗봇 스트리밍, 복잡한 레이아웃, 100명 동시접속 성능)을 충족하기 어려운 한계가 있음. Next.js + Deck.gl 전환을 통해 다음을 확보:
+
+1. **3D 맵 인터랙션:** Deck.gl은 PyDeck의 원본 라이브러리로 훨씬 강력한 이벤트 핸들링 제공
+2. **챗봇 UX:** Vercel AI SDK로 GPT 스트리밍 즉시 구현
+3. **성능:** 서버 컴포넌트 + 정적 생성으로 동시접속 처리 용이
+4. **배포:** Vercel 무료 티어로 자동 CI/CD 지원
 
 ---
 
