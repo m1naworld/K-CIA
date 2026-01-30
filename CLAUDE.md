@@ -27,16 +27,41 @@
 
 ## 기술 스택
 
-| 영역 | 기술 |
-|------|------|
-| Frontend | Next.js 14 (App Router), Deck.gl + react-map-gl, TailwindCSS + shadcn/ui, Recharts |
-| State | Zustand |
-| Backend | Python 3.11+, FastAPI |
-| AI | LangGraph, LangChain, OpenAI GPT-4o-mini (→ 4o 에스컬레이션), Vercel AI SDK |
-| Content Gen | Gemini Nano Banana (4컷 만화/쇼츠 콘텐츠 생성 — Phase 4) |
-| Database | Supabase (PostgreSQL + PostGIS + pgvector) |
-| ETL | Python (collectors/processors), Cron (초기) → Prefect (고도화) |
-| Data Sources | 서울시 공공데이터(D1/D2/D3/D5/D9/D11), YouTube API (옵션) |
+### Frontend
+| 기술 | 용도 |
+|-----|-----|
+| Next.js 14 (App Router) | React 기반 풀스택 프레임워크 |
+| Deck.gl + react-map-gl | WebGL 기반 3D 지도 시각화 |
+| TailwindCSS | 유틸리티 퍼스트 CSS |
+| shadcn/ui | 재사용 가능한 UI 컴포넌트 |
+| Recharts | 차트 시각화 |
+| Zustand | 경량 상태 관리 |
+| TypeScript | 타입 안전성 |
+
+### Backend
+| 기술 | 용도 |
+|-----|-----|
+| Python 3.11+ | 메인 런타임 |
+| FastAPI | REST API 서버 |
+| LangChain + LangGraph | LLM 오케스트레이션 |
+| OpenAI GPT-4o-mini (→ 4o 에스컬레이션) | LLM 추론 |
+| Vercel AI SDK | 챗봇 스트리밍 |
+
+### Database & Infra
+| 기술 | 용도 |
+|-----|-----|
+| Supabase (PostgreSQL + PostGIS + pgvector) | 관계형 DB + 벡터 검색 |
+| Docker | 컨테이너화 |
+| GitHub Actions | CI/CD |
+
+### Content Gen
+| 기술 | 용도 |
+|-----|-----|
+| Gemini Nano Banana | 4컷 만화/쇼츠 콘텐츠 생성 (Phase 4) |
+
+### Data Sources
+- 서울시 공공데이터(D1/D2/D3/D5/D9/D11)
+- YouTube Data API (옵션)
 
 ---
 
@@ -54,13 +79,20 @@ K-CIA/
 │   ├── PLAN.md                        # 실행 계획서 (마일스톤/데이터셋/확장)
 │   ├── TODO.md                        # 작업 티켓 (M0~M4)
 │   ├── PROGRESS.md                    # 진행상황 로그
-│   └── DECISIONS.md                   # 의사결정 로그
+│   ├── DECISIONS.md                   # 의사결정 로그
+│   └── ui.md                          # UI/UX 코딩 표준 (프론트엔드 필수 참고)
 ├── frontend/                          # Next.js 앱 (구현 예정)
 │   └── src/
 │       ├── app/                       # App Router pages
-│       ├── components/                # HexMap, Sidebar, ChatPanel, FilterPanel, AsOfBadge
+│       ├── components/                # React 컴포넌트
+│       │   ├── ui/                    # shadcn/ui 컴포넌트
+│       │   ├── map/                   # Deck.gl 맵 (HexMap 등)
+│       │   ├── chat/                  # 챗봇 UI
+│       │   ├── sidebar/              # 필터/상세 패널
+│       │   └── charts/               # Recharts 차트
 │       ├── store/                     # Zustand stores
-│       └── lib/                       # 유틸리티
+│       ├── lib/                       # 유틸리티
+│       └── types/                     # TypeScript 타입
 ├── backend/                           # FastAPI 서버 (구현 예정)
 │   ├── api/                           # map, chat, data, events 엔드포인트
 │   ├── agents/                        # supervisor, sql_agent, insight_agent, graph
@@ -88,6 +120,7 @@ K-CIA/
    - `docs/TODO.md` — 완료 체크, 새 티켓 추가
    - `docs/DECISIONS.md` — 새 결정사항 발생 시 추가
 5. **다음 액션은 최대 3개만** 제시하고 멈춤
+6. **UI 구현 시** 반드시 `docs/ui.md` 참고 — shadcn/ui 컴포넌트만 사용, date-fns 날짜 포맷
 
 ---
 
@@ -169,9 +202,18 @@ SQL Agent           Insight Agent
 ## 개발 가이드라인
 
 ### 코드 스타일
-- Python: PEP 8 + ruff. Type hints 필수. Docstring: Google style
-- TypeScript: eslint + prettier. strict mode
-- 함수/클래스명은 명확하고 서술적으로
+
+**Python (Backend)**
+- PEP 8 + ruff
+- Type hints 필수
+- Docstring: Google style
+- 함수/클래스명: 명확하고 서술적으로
+
+**TypeScript (Frontend)**
+- ESLint + Prettier 설정 준수
+- 컴포넌트: PascalCase
+- 함수/변수: camelCase
+- 타입 정의 필수
 
 ### 커밋 메시지
 ```
@@ -179,6 +221,13 @@ SQL Agent           Insight Agent
 
 types: feat, fix, docs, style, refactor, test, chore
 scope: frontend, backend, etl, docs
+```
+
+예시:
+```
+feat(frontend): Add HexagonMap component with Deck.gl
+feat(backend): Add SQL agent for quantitative queries
+fix(frontend): Fix hexagon click event handler
 ```
 
 ### 브랜치 전략
@@ -192,21 +241,46 @@ scope: frontend, backend, etl, docs
 ## 환경 변수
 
 ```bash
-# 필수
-SUPABASE_URL=
-SUPABASE_KEY=
-OPENAI_API_KEY=
-SEOUL_API_KEY=
+# Database
+SUPABASE_URL=         # Supabase 프로젝트 URL
+SUPABASE_KEY=         # Supabase anon/service key
+
+# AI
+OPENAI_API_KEY=       # OpenAI API 키
+
+# External APIs
+SEOUL_API_KEY=        # 서울 열린데이터 광장 API 키
+MAPBOX_TOKEN=         # Mapbox 액세스 토큰
+
+# App
+NEXT_PUBLIC_API_URL=  # FastAPI 백엔드 URL
 
 # 옵션
-YOUTUBE_API_KEY=          # 유튜브 모듈 사용 시
-GEMINI_API_KEY=           # 콘텐츠 생성(4컷/쇼츠) — Phase 4
-MAPBOX_ACCESS_TOKEN=      # Deck.gl 맵 타일
+YOUTUBE_API_KEY=      # 유튜브 모듈 사용 시
+GEMINI_API_KEY=       # 콘텐츠 생성(4컷/쇼츠) — Phase 4
 ```
 
 ### 로컬 개발
+
+**Backend**
 ```bash
-docker-compose up        # Postgres + FastAPI + Next.js
+cd backend
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --reload
+```
+
+**Frontend**
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+**Docker**
+```bash
+docker-compose up -d
 ```
 
 ---
@@ -217,6 +291,7 @@ docker-compose up        # Postgres + FastAPI + Next.js
 - API 키 하드코딩 금지. `.env` 사용
 - SQL Agent: parameterized query + 허용 테이블만 접근
 - 사용자 입력 sanitize
+- CORS 설정 필수
 
 ### 성능
 - 맵 렌더링 < 3초
@@ -252,3 +327,4 @@ docker-compose up        # Postgres + FastAPI + Next.js
 - [데이터 수집 계획](K-CIA_Lite_DataIngestionPlan.md) — 수집 파이프라인/의사코드/메타 테이블
 - [실행 계획](docs/PLAN.md) — 마일스톤/데이터 최소셋/확장 로드맵
 - [의사결정 로그](docs/DECISIONS.md) — 확정된 결정사항과 근거
+- [UI 코딩 표준](docs/ui.md) — **프론트엔드 구현 시 필수 참고** (shadcn/ui, date-fns)
