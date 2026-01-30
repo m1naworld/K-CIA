@@ -1,9 +1,9 @@
 # K-CIA Lite: Technical Requirements Document (TRD)
 
-**버전:** 1.0
+**버전:** 1.1
 **상태:** Draft
 **작성일:** 2026-01-26
-**최종 수정:** 2026-01-26
+**최종 수정:** 2026-01-30
 
 ---
 
@@ -21,10 +21,15 @@
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                              Client Layer                                │
 │  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │                    Streamlit Web Application                      │   │
+│  │                    Next.js Web Application                        │   │
 │  │  ┌──────────────────┐  ┌──────────────────┐  ┌───────────────┐  │   │
-│  │  │   PyDeck 3D Map  │  │   Chat Interface │  │   Sidebar     │  │   │
+│  │  │  Deck.gl 3D Map  │  │   Chat Interface │  │   Sidebar     │  │   │
+│  │  │  + react-map-gl  │  │   (shadcn/ui)    │  │   (Filters)   │  │   │
 │  │  └──────────────────┘  └──────────────────┘  └───────────────┘  │   │
+│  │  ┌──────────────────┐  ┌──────────────────┐                     │   │
+│  │  │  Recharts/Tremor │  │  Zustand/Jotai   │                     │   │
+│  │  │  (Charts)        │  │  (State Mgmt)    │                     │   │
+│  │  └──────────────────┘  └──────────────────┘                     │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────────┘
                                     │
@@ -34,8 +39,8 @@
 │  ┌─────────────────────────────────────────────────────────────────┐   │
 │  │                         FastAPI Server                            │   │
 │  │  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────┐ │   │
-│  │  │  /api/map    │  │  /api/chat   │  │  /api/data             │ │   │
-│  │  │  헥사곤 데이터│  │  AI 대화     │  │  구역 상세 정보        │ │   │
+│  │  │  /api/blocks │  │ /api/agent   │  │  /api/data             │ │   │
+│  │  │  헥사곤 데이터│  │  AI 질의     │  │  구역 상세 정보        │ │   │
 │  │  └──────────────┘  └──────────────┘  └────────────────────────┘ │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -88,9 +93,14 @@
 
 | 계층 | 기술 | 버전 | 용도 |
 |-----|-----|-----|-----|
-| **Frontend** | Streamlit | 1.32+ | 웹 UI 프레임워크 |
-| | PyDeck | 0.8+ | 3D 맵 시각화 |
-| | Plotly | 5.18+ | 차트 시각화 |
+| **Frontend** | Next.js | 14+ (App Router) | React 기반 풀스택 프레임워크 |
+| | Deck.gl | 9+ | WebGL 기반 3D 맵 시각화 |
+| | react-map-gl | 7+ | Mapbox GL JS React 래퍼 |
+| | TailwindCSS | 3+ | 유틸리티 퍼스트 CSS |
+| | shadcn/ui | latest | 재사용 가능한 UI 컴포넌트 |
+| | Recharts/Tremor | latest | 차트 시각화 |
+| | Zustand/Jotai | latest | 경량 상태 관리 |
+| | TypeScript | 5+ | 타입 안전성 |
 | **Backend** | Python | 3.11+ | 메인 런타임 |
 | | FastAPI | 0.109+ | REST API 서버 |
 | | Uvicorn | 0.27+ | ASGI 서버 |
@@ -251,14 +261,15 @@ CREATE TABLE sentiment_agg (
 
 ### 4.1 API 엔드포인트
 
-#### 4.1.1 Map API
+#### 4.1.1 Blocks API (Map Data)
 
-**GET /api/map/hexagons**
+**GET /api/blocks**
 ```yaml
 Description: 헥사곤 그리드 데이터 조회
 Query Parameters:
   - layer: string (enum: population, sales, sentiment)
-  - date: string (YYYY-MM-DD, optional)
+  - quarter: string (YYYY-Qn, optional)
+  - industry: string (optional)
 Response:
   - 200 OK
     {
@@ -284,9 +295,12 @@ Response:
     }
 ```
 
-**GET /api/map/hexagon/{hex_id}**
+**GET /api/blocks/{hex_id}/summary**
 ```yaml
 Description: 특정 헥사곤 상세 정보
+Query Parameters:
+  - quarter: string (YYYY-Qn)
+  - industry: string (optional)
 Response:
   - 200 OK
     {
@@ -310,18 +324,20 @@ Response:
     }
 ```
 
-#### 4.1.2 Chat API
+#### 4.1.2 Agent API (AI Chat)
 
-**POST /api/chat**
+**POST /api/agent/query**
 ```yaml
 Description: AI 챗봇 질의
 Request Body:
   {
-    "message": "연무장길에 디저트 카페 차려도 될까?",
-    "context": {
-      "selected_hex_id": "8930624...",
-      "session_id": "uuid"
-    }
+    "question": "연무장길에 디저트 카페 차려도 될까?",
+    "hex_id": "8930624...",
+    "filters": {
+      "quarter": "2025Q4",
+      "industry": "cafe"
+    },
+    "recent_youtube_summary_ids": ["abc123", "def456"]
   }
 Response:
   - 200 OK
@@ -334,11 +350,14 @@ Response:
       "suggested_questions": [
         "경쟁 카페 현황은?",
         "유동인구 시간대별 분석"
+      ],
+      "charts": [
+        {"type": "bar", "data": {...}}
       ]
     }
 ```
 
-**GET /api/chat/history/{session_id}**
+**GET /api/agent/history/{session_id}**
 ```yaml
 Description: 대화 히스토리 조회
 Response:
@@ -659,103 +678,235 @@ class SeoulDataCollector:
 
 ## 7. 프론트엔드 구현
 
-### 7.1 Streamlit 앱 구조
+### 7.1 Next.js 앱 구조
 
 ```
-app/
-├── main.py                 # 앱 진입점
-├── pages/
-│   ├── 01_map.py          # 3D 맵 페이지
-│   └── 02_analysis.py     # 상세 분석 페이지
+frontend/
+├── app/                       # Next.js App Router
+│   ├── layout.tsx            # 루트 레이아웃
+│   ├── page.tsx              # 메인 페이지 (지도 대시보드)
+│   ├── globals.css           # 전역 스타일 (Tailwind)
+│   └── api/                  # API Routes (필요시)
 ├── components/
-│   ├── hexagon_map.py     # PyDeck 맵 컴포넌트
-│   ├── chat_interface.py  # 챗봇 UI
-│   ├── sidebar.py         # 사이드바
-│   └── charts.py          # 차트 컴포넌트
-├── services/
-│   ├── api_client.py      # 백엔드 API 클라이언트
-│   └── session.py         # 세션 관리
-└── utils/
-    ├── colors.py          # 색상 유틸리티
-    └── formatters.py      # 데이터 포매터
+│   ├── ui/                   # shadcn/ui 컴포넌트
+│   │   ├── button.tsx
+│   │   ├── card.tsx
+│   │   ├── input.tsx
+│   │   └── ...
+│   ├── map/
+│   │   ├── HexagonMap.tsx    # Deck.gl 맵 컴포넌트
+│   │   ├── MapControls.tsx   # 줌/레이어 컨트롤
+│   │   └── HexagonTooltip.tsx
+│   ├── chat/
+│   │   ├── ChatInterface.tsx # AI 챗봇 UI
+│   │   ├── ChatMessage.tsx
+│   │   └── ChatInput.tsx
+│   ├── sidebar/
+│   │   ├── FilterPanel.tsx   # 필터 패널
+│   │   ├── HexagonDetail.tsx # 선택 구역 상세
+│   │   └── MetricCard.tsx
+│   └── charts/
+│       ├── SalesChart.tsx    # Recharts 매출 차트
+│       ├── TrendChart.tsx
+│       └── CompareChart.tsx
+├── lib/
+│   ├── api.ts                # FastAPI 클라이언트
+│   ├── utils.ts              # 유틸리티 함수
+│   └── constants.ts          # 상수 정의
+├── stores/
+│   └── useMapStore.ts        # Zustand 상태 관리
+├── types/
+│   └── index.ts              # TypeScript 타입 정의
+├── tailwind.config.ts
+├── next.config.js
+└── package.json
 ```
 
-### 7.2 PyDeck 3D 맵 구성
+### 7.2 Deck.gl 3D 맵 구성
 
-```python
-import pydeck as pdk
+```tsx
+// components/map/HexagonMap.tsx
+import { DeckGL } from '@deck.gl/react';
+import { H3HexagonLayer } from '@deck.gl/geo-layers';
+import { Map } from 'react-map-gl';
+import { useMapStore } from '@/stores/useMapStore';
 
-def create_hexagon_layer(hexagons: list[dict]) -> pdk.Layer:
-    """헥사곤 레이어 생성"""
-    return pdk.Layer(
-        "ColumnLayer",
-        data=hexagons,
-        get_position=["lng", "lat"],
-        get_elevation="elevation",
-        elevation_scale=50,
-        radius=50,
-        get_fill_color="color",
-        pickable=True,
-        auto_highlight=True,
-    )
+interface HexagonData {
+  hex_id: string;
+  elevation: number;
+  color: [number, number, number, number];
+  metrics: {
+    population: number;
+    sales: number;
+    sentiment: number;
+  };
+}
 
-def create_map_view(center: tuple[float, float]) -> pdk.Deck:
-    """3D 맵 뷰 생성"""
-    return pdk.Deck(
-        map_style="mapbox://styles/mapbox/dark-v10",
-        initial_view_state=pdk.ViewState(
-            latitude=center[0],
-            longitude=center[1],
-            zoom=15,
-            pitch=45,
-            bearing=0
-        ),
-        layers=[hexagon_layer],
-        tooltip={
-            "html": "<b>유동인구:</b> {population}명<br>"
-                    "<b>감성점수:</b> {sentiment}",
-            "style": {"color": "white"}
-        }
-    )
+export function HexagonMap() {
+  const { hexagons, selectedHexId, setSelectedHexId } = useMapStore();
+
+  const layer = new H3HexagonLayer<HexagonData>({
+    id: 'h3-hexagon-layer',
+    data: hexagons,
+    pickable: true,
+    wireframe: false,
+    filled: true,
+    extruded: true,
+    elevationScale: 50,
+    getHexagon: (d) => d.hex_id,
+    getFillColor: (d) => d.color,
+    getElevation: (d) => d.elevation,
+    onClick: (info) => {
+      if (info.object) {
+        setSelectedHexId(info.object.hex_id);
+      }
+    },
+  });
+
+  return (
+    <DeckGL
+      initialViewState={{
+        latitude: 37.5443,
+        longitude: 127.0557,
+        zoom: 14,
+        pitch: 45,
+        bearing: 0,
+      }}
+      controller={true}
+      layers={[layer]}
+    >
+      <Map
+        mapStyle="mapbox://styles/mapbox/dark-v11"
+        mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
+      />
+    </DeckGL>
+  );
+}
 ```
 
-### 7.3 Chat Interface
+### 7.3 상태 관리 (Zustand)
 
-```python
-import streamlit as st
+```typescript
+// stores/useMapStore.ts
+import { create } from 'zustand';
+import type { HexagonData, Filters } from '@/types';
 
-def render_chat():
-    """챗봇 인터페이스 렌더링"""
+interface MapState {
+  hexagons: HexagonData[];
+  selectedHexId: string | null;
+  filters: Filters;
+  isLoading: boolean;
 
-    # 대화 히스토리 표시
-    for msg in st.session_state.messages:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
-            if msg.get("sources"):
-                with st.expander("📌 출처"):
-                    for source in msg["sources"]:
-                        st.caption(f"- {source}")
+  // Actions
+  setHexagons: (hexagons: HexagonData[]) => void;
+  setSelectedHexId: (hexId: string | null) => void;
+  setFilters: (filters: Partial<Filters>) => void;
+  fetchHexagons: () => Promise<void>;
+}
 
-    # 입력 처리
-    if prompt := st.chat_input("질문을 입력하세요"):
-        st.session_state.messages.append({
-            "role": "user",
-            "content": prompt
-        })
+export const useMapStore = create<MapState>((set, get) => ({
+  hexagons: [],
+  selectedHexId: null,
+  filters: {
+    quarter: '2025Q4',
+    industry: null,
+    layer: 'population',
+  },
+  isLoading: false,
 
-        with st.chat_message("assistant"):
-            with st.spinner("분석 중..."):
-                response = api_client.chat(
-                    message=prompt,
-                    context=st.session_state.context
-                )
-            st.markdown(response["content"])
+  setHexagons: (hexagons) => set({ hexagons }),
+  setSelectedHexId: (hexId) => set({ selectedHexId: hexId }),
+  setFilters: (filters) => set((state) => ({
+    filters: { ...state.filters, ...filters }
+  })),
 
-        st.session_state.messages.append({
-            "role": "assistant",
-            "content": response["content"],
-            "sources": response["sources"]
-        })
+  fetchHexagons: async () => {
+    set({ isLoading: true });
+    const { filters } = get();
+    const response = await fetch(`/api/blocks?${new URLSearchParams(filters)}`);
+    const data = await response.json();
+    set({ hexagons: data.hexagons, isLoading: false });
+  },
+}));
+```
+
+### 7.4 Chat Interface
+
+```tsx
+// components/chat/ChatInterface.tsx
+'use client';
+
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
+import { ChatMessage } from './ChatMessage';
+import { useMapStore } from '@/stores/useMapStore';
+
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+  sources?: { type: string; period?: string; count?: number }[];
+}
+
+export function ChatInterface() {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { selectedHexId, filters } = useMapStore();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+
+    const userMessage: Message = { role: 'user', content: input };
+    setMessages((prev) => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
+
+    const response = await fetch('/api/agent/query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question: input,
+        hex_id: selectedHexId,
+        filters,
+      }),
+    });
+
+    const data = await response.json();
+    const assistantMessage: Message = {
+      role: 'assistant',
+      content: data.response,
+      sources: data.sources,
+    };
+
+    setMessages((prev) => [...prev, assistantMessage]);
+    setIsLoading(false);
+  };
+
+  return (
+    <Card className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.map((msg, i) => (
+          <ChatMessage key={i} message={msg} />
+        ))}
+        {isLoading && <div className="text-muted-foreground">분석 중...</div>}
+      </div>
+      <form onSubmit={handleSubmit} className="p-4 border-t flex gap-2">
+        <Input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="질문을 입력하세요..."
+          disabled={isLoading}
+        />
+        <Button type="submit" disabled={isLoading}>
+          전송
+        </Button>
+      </form>
+    </Card>
+  );
+}
 ```
 
 ---
@@ -765,28 +916,50 @@ def render_chat():
 ### 8.1 Docker 구성
 
 ```dockerfile
-# Dockerfile
+# backend/Dockerfile
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# 시스템 의존성
 RUN apt-get update && apt-get install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Python 의존성
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 앱 코드
 COPY . .
 
-# 환경변수
 ENV PYTHONUNBUFFERED=1
 
-# 실행
-CMD ["streamlit", "run", "app/main.py", "--server.port=8501"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+```dockerfile
+# frontend/Dockerfile
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+
+EXPOSE 3000
+
+CMD ["node", "server.js"]
 ```
 
 ```yaml
@@ -794,20 +967,28 @@ CMD ["streamlit", "run", "app/main.py", "--server.port=8501"]
 version: '3.8'
 
 services:
-  app:
-    build: .
+  frontend:
+    build: ./frontend
     ports:
-      - "8501:8501"
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:8000
+      - NEXT_PUBLIC_MAPBOX_TOKEN=${MAPBOX_TOKEN}
+    depends_on:
+      - backend
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
     environment:
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_KEY=${SUPABASE_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
-    volumes:
-      - ./app:/app/app
 
   worker:
-    build: .
+    build: ./backend
     command: python -m celery -A worker worker -l info
     environment:
       - SUPABASE_URL=${SUPABASE_URL}
@@ -818,6 +999,7 @@ services:
 
 ```bash
 # .env.example
+
 # Database
 SUPABASE_URL=https://xxx.supabase.co
 SUPABASE_KEY=eyJ...
@@ -828,6 +1010,7 @@ OPENAI_API_KEY=sk-...
 # External APIs
 YOUTUBE_API_KEY=AIza...
 SEOUL_API_KEY=...
+MAPBOX_TOKEN=pk.eyJ...
 
 # App
 DEBUG=false
@@ -845,25 +1028,38 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  test-backend:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install -r requirements.txt
-      - run: pytest tests/
+      - run: pip install -r backend/requirements.txt
+      - run: pytest backend/tests/
 
-  deploy:
-    needs: test
+  test-frontend:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy to Streamlit Cloud
-        uses: streamlit/streamlit-action@v1
+      - uses: actions/setup-node@v4
         with:
-          app-path: app/main.py
+          node-version: '20'
+      - run: cd frontend && npm ci
+      - run: cd frontend && npm run lint
+      - run: cd frontend && npm run build
+
+  deploy:
+    needs: [test-backend, test-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to Vercel (Frontend)
+        uses: vercel/action@v1
+        with:
+          working-directory: frontend
+      - name: Deploy to Railway/Render (Backend)
+        # Backend deployment steps
 ```
 
 ---
@@ -916,6 +1112,7 @@ logger.info("Chat query processed", extra={
 - [ ] Rate limiting 적용
 - [ ] HTTPS 강제
 - [ ] 민감 데이터 로깅 금지
+- [ ] CORS 설정 (허용된 origin만)
 
 ### 10.2 SQL 인젝션 방지
 
@@ -936,7 +1133,7 @@ cursor.execute(query, (hex_id,))
 
 | 유형 | 대상 | 도구 |
 |-----|-----|-----|
-| Unit | 유틸리티 함수, 데이터 변환 | pytest |
+| Unit | 유틸리티 함수, 데이터 변환 | pytest, vitest |
 | Integration | API 엔드포인트, DB 쿼리 | pytest + httpx |
 | E2E | 사용자 시나리오 | Playwright |
 | Load | 동시 접속, 응답 시간 | Locust |
@@ -944,7 +1141,7 @@ cursor.execute(query, (hex_id,))
 ### 11.2 테스트 예시
 
 ```python
-# tests/test_agents.py
+# backend/tests/test_agents.py
 import pytest
 from agents.sql_agent import SQLAgent
 
@@ -964,6 +1161,19 @@ async def test_sql_agent_invalid_query():
 
     assert result.error is not None
     assert "상권" in result.error or "지원하지 않" in result.error
+```
+
+```typescript
+// frontend/__tests__/HexagonMap.test.tsx
+import { render, screen } from '@testing-library/react';
+import { HexagonMap } from '@/components/map/HexagonMap';
+
+describe('HexagonMap', () => {
+  it('renders map container', () => {
+    render(<HexagonMap />);
+    expect(screen.getByTestId('deck-gl-canvas')).toBeInTheDocument();
+  });
+});
 ```
 
 ---
@@ -992,4 +1202,4 @@ async def test_sql_agent_invalid_query():
 ---
 
 *Document Owner: Engineering Team*
-*Last Updated: 2026-01-26*
+*Last Updated: 2026-01-30*
