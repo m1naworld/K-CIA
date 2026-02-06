@@ -7,14 +7,17 @@
 .DS_Store
 Thumbs.db
 
-# Data files
-data/
+# Data files (raw)
+data/raw/
 *.csv
 *.shp
 *.shx
 *.dbf
 *.prj
 *.cpg
+
+# Allow DB dump
+!data/dump/
 
 # Python
 __pycache__/
