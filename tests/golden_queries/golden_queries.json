@@ -1,0 +1,57 @@
+{
+  "version": "1.0",
+  "description": "K-CIA SQL Agent Golden Query Test Cases",
+  "queries": [
+    {
+      "id": "topn_sales",
+      "name": "TopN 매출 추천",
+      "question": "성수동 커피 전문점 매출 Top3 알려줘",
+      "expected_route": "sql",
+      "expected_sql_patterns": [
+        "SELECT",
+        "커피-음료",
+        "sales_amt",
+        "ORDER BY",
+        "DESC",
+        "LIMIT"
+      ],
+      "expected_columns": ["area_name", "sales_amt"],
+      "expected_row_count_min": 1,
+      "expected_row_count_max": 5,
+      "expected_top_result": {
+        "area_name_contains": "뚝섬역"
+      },
+      "validation_sql": "SELECT da.area_name, fs.sales_amt FROM fact_sales_area_qtr fs JOIN dim_area da ON fs.area_id = da.area_id JOIN dim_category dc ON fs.cat_id = dc.cat_id WHERE dc.service_name = '커피-음료' AND fs.qtr = '20251' ORDER BY fs.sales_amt DESC LIMIT 3"
+    },
+    {
+      "id": "qoq_comparison",
+      "name": "QoQ 비교",
+      "question": "성수동 카페 매출 전분기 대비 변화량 알려줘",
+      "expected_route": "sql",
+      "expected_sql_patterns": [
+        "SELECT",
+        "커피-음료",
+        "sales"
+      ],
+      "expected_sql_patterns_any": ["LAG", "20244", "prev"],
+      "expected_columns": ["area_name"],
+      "expected_row_count_min": 1,
+      "validation_sql": "WITH curr AS (SELECT area_id, sales_amt FROM fact_sales_area_qtr fs JOIN dim_category dc ON fs.cat_id = dc.cat_id WHERE dc.service_name = '커피-음료' AND qtr = '20251'), prev AS (SELECT area_id, sales_amt FROM fact_sales_area_qtr fs JOIN dim_category dc ON fs.cat_id = dc.cat_id WHERE dc.service_name = '커피-음료' AND qtr = '20244') SELECT da.area_name, c.sales_amt AS curr_sales, p.sales_amt AS prev_sales, ROUND((c.sales_amt - p.sales_amt)::numeric / NULLIF(p.sales_amt, 0) * 100, 2) AS change_pct FROM curr c JOIN prev p ON c.area_id = p.area_id JOIN dim_area da ON c.area_id = da.area_id ORDER BY c.sales_amt DESC LIMIT 10"
+    },
+    {
+      "id": "suitability_score",
+      "name": "적합도 점수 (창업 추천)",
+      "question": "성수동에서 제과점 창업하기 좋은 상권 Top3 추천해줘",
+      "expected_route": "both",
+      "expected_sql_patterns": [
+        "SELECT",
+        "제과점"
+      ],
+      "expected_columns": ["area_name"],
+      "expected_row_count_min": 1,
+      "has_insight": true,
+      "insight_required_fields": ["evidence", "risks", "recommendations"],
+      "validation_sql": "SELECT da.area_name, fs.sales_amt, ff.flow_total, fst.store_cnt FROM fact_sales_area_qtr fs JOIN dim_area da ON fs.area_id = da.area_id JOIN dim_category dc ON fs.cat_id = dc.cat_id LEFT JOIN fact_flow_area_qtr ff ON fs.area_id = ff.area_id AND fs.qtr = ff.qtr LEFT JOIN fact_store_area_qtr fst ON fs.area_id = fst.area_id AND fs.qtr = fst.qtr AND fs.cat_id = fst.cat_id WHERE dc.service_name = '제과점' AND fs.qtr = '20251' ORDER BY fs.sales_amt DESC LIMIT 5"
+    }
+  ]
+}

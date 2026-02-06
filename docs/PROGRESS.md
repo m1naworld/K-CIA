@@ -28,11 +28,11 @@
 
 | 데이터셋 | raw | normalized | mart(H3) | 상태 |
 |---------|-----|-----------|----------|------|
-| D1 매출 | - | - | - | 미시작 |
+| D1 매출 | ✅ | ✅ fact_sales | - | 완료 (4,320행, 12분기) |
 | D2 점포 | - | - | - | 미시작 |
-| D3 상권영역 | - | - | - | 미시작 |
+| D3 상권영역 | ✅ | ✅ dim_area | - | 완료 (23개 상권) |
 | D5 유동 | - | - | - | 미시작 |
-| D9 행정동 | - | - | - | 미시작 |
+| D9 행정동 | ✅ | ✅ dim_area | - | 완료 (4개 행정동) |
 | D11 실시간 | - | - | - | 미시작 |
 
 ### 블로커
@@ -45,8 +45,1227 @@
 
 ---
 
-## 다음 3개 액션 (승인 대기)
+---
 
-1. **M0-1~M0-4**: 모노레포 구조 생성 + docker-compose + Next.js/FastAPI 스켈레톤
-2. **M1-1**: DDL 실행 (핵심 테이블 + 수집 메타 테이블 생성)
-3. **M1-2**: D9(행정동 SHP) + D3(상권영역) 다운로드 및 dim_area 적재
+## 2026-01-31 — M0 Repo/Infra 완료
+
+### 상태: M0 COMPLETE (M0-1 ~ M0-4)
+
+### 완료한 작업
+
+- [x] M0-1: 모노레포 디렉토리 구조 생성 (`frontend/`, `backend/`, `etl/`, `tests/`)
+- [x] M0-2: `docker-compose.yml` (Postgres/PostGIS + FastAPI + Next.js) + `.env.example`
+- [x] M0-3: Next.js 14 초기화 (App Router + TypeScript + TailwindCSS + shadcn/ui + Deck.gl + Zustand + Recharts)
+- [x] M0-4: FastAPI 스켈레톤 (`main.py` + `/health` + `requirements.txt` + `Dockerfile`)
+
+### 산출물
+
+- `docker-compose.yml` — db(postgis/postgis:16-3.4), backend(FastAPI), frontend(Next.js)
+- `.env.example` — 필요 환경변수 목록
+- `backend/main.py` — FastAPI + CORS + /health endpoint
+- `backend/Dockerfile`, `frontend/Dockerfile`
+- `frontend/` — Next.js 14 빌드 성공 확인
+- shadcn/ui 초기화 완료 (`src/lib/utils.ts`, `components.json`)
+
+### 미완료
+
+- M0-5 (DB 마이그레이션 도구 + CI lint 설정) — P1, M1 진입 시 필요하면 진행
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-02-02 — 지도 정리 + 환경변수 보강
+
+### 상태: DONE
+
+### 완료한 작업
+
+- [x] 지도 목업 라벨/핫스팟 제거 (대림창고, 헤이그라운드 등 하드코딩 데이터 삭제)
+- [x] 상권 경계 표시를 대시 패턴 중심으로 정리 (색상 충돌 완화)
+- [x] API 실패 시 목업 데이터 대신 빈 상태로 처리
+- [x] `NEXT_PUBLIC_MAPBOX_TOKEN` 환경변수 추가 (.env)
+- [x] D2 점포 데이터 분기 확장 (2025Q2, 2025Q3 적재)
+
+### 수정 파일
+
+| 파일 | 변경 |
+|------|------|
+| `frontend/src/components/map/HexMap.tsx` | 목업/라벨 제거, 상권 경계 대시 스타일 적용, API 기본 URL 처리 |
+| `.env` | NEXT_PUBLIC_MAPBOX_TOKEN 추가 |
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-01-31 — M1-1 DDL 완료
+
+### 상태: M1 IN PROGRESS
+
+### 완료한 작업
+
+- [x] M1-1: DDL 실행 (핵심 테이블 생성)
+  - `backend/migrations/001_init_schema.sql` 생성
+  - Extensions: postgis, vector
+  - 12개 테이블: dim_area, dim_category, preset_area_scope, bridge_area_h3_weight, fact_sales_area_qtr, fact_flow_area_qtr, fact_store_area_qtr, fact_realtime_congestion_area, analysis_run, ingest_runs, raw_objects, schema_registry
+  - 인덱스: dim_area(area_type, area_code) UNIQUE, bridge_area_h3_weight(h3_index), analysis_run(created_at)
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-01-31 — M1-2 COMPLETE
+
+### 상태: M1-2 DONE
+
+### 완료한 작업
+
+- [x] M1-2 ETL 코드 구현 (6개 파일)
+  - `etl/config.py` — 경로, CRS, 성수동 필터 상수
+  - `etl/db.py` — SQLAlchemy 엔진/세션 유틸
+  - `etl/collectors/boundary_collector.py` — D9/D3 SHP 읽기 (인코딩 자동감지)
+  - `etl/processors/spatial_utils.py` — CRS 변환, geometry 검증/정규화
+  - `etl/processors/area_loader.py` — 성수동 필터 + dim_area upsert + preset_area_scope
+  - `etl/load_boundaries.py` — 메인 실행 스크립트 + 검증 쿼리
+- [x] D9 행정동 SHP 다운로드 및 적재 (성수동 4개 행정동)
+- [x] D3 상권영역 SHP 다운로드 및 적재 (성수동 23개 상권)
+- [x] preset_area_scope 적재 (27행)
+- [x] `docs/DB_GUIDE.md` — DB 접속 및 조회 가이드 작성
+
+### DoD 검증 결과
+
+```
+dim_area ADMIN_DONG:      4행 (성수1가1동, 1가2동, 2가1동, 2가3동)
+dim_area COMMERCIAL_AREA: 23행 (≥10 충족)
+geometry validity:        27/27 valid
+SRID:                     4326
+preset_area_scope:        27행
+```
+
+### 블로커
+
+- 없음
+
+### 참고사항
+
+- pgvector 확장은 현재 Docker 이미지에 미포함 → M1에서는 불필요, 추후 필요 시 이미지 교체
+- D3 인코딩: UTF-8 (cp949 아님)
+- D9 인코딩: cp949
+- D9 CRS: EPSG:5186 → 4326 변환
+- D3 CRS: EPSG:5181 → 4326 변환
+
+---
+
+## 2026-01-31 — M1-3 COMPLETE
+
+### 상태: M1-3 DONE
+
+### 완료한 작업
+
+- [x] M1-3: H3 polyfill (res=10) → bridge_area_h3_weight
+  - `etl/processors/h3_mapper.py` — polyfill + weight 계산 + centroid fallback
+  - `etl/load_h3.py` — 메인 실행 스크립트 + 검증 쿼리
+  - `etl/Dockerfile` — ETL 전용 Docker 이미지 (Python 3.11 + GDAL + h3 + geopandas)
+  - `etl/requirements.txt` — ETL 전용 패키지 목록
+  - `docker-compose.yml` — etl 서비스 추가 (profile: etl)
+
+### DoD 검증 결과
+
+```
+Distinct H3 indices: 75 (> 50 ✓)
+ADMIN_DONG:       67 bridge rows, 67 unique H3
+COMMERCIAL_AREA:  44 bridge rows, 41 unique H3
+총 109개 bridge_area_h3_weight 레코드
+```
+
+### 참고사항
+
+- h3 v3 `polyfill_geojson`은 표준 GeoJSON (lng, lat) 형식 사용
+- 작은 상권(골목형/역세권)은 centroid fallback으로 hex 1개 할당 (weight=1.0)
+- 행정동은 11~27 hex, 상권은 1~6 hex로 매핑됨
+- ETL은 `docker-compose run --rm etl etl.load_h3` 으로 실행
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-01-31 — M1-4 코드 완료 (데이터 대기)
+
+### 상태: M1-4 COMPLETE
+
+### 완료한 작업
+
+- [x] M1-4: D1(매출) ETL 코드 구현 (4개 파일)
+  - `etl/config.py` — D1 경로, 컬럼 매핑, 인코딩 설정 추가
+  - `etl/collectors/seoul_zip_collector.py` — ZIP 탐색/압축해제
+  - `etl/processors/sales_processor.py` — CSV 파싱 + 성수동 필터 + dim_category/fact_sales upsert
+  - `etl/load_sales.py` — 메인 실행 스크립트 + 검증 쿼리 (CSV/ZIP 모두 지원)
+  - `etl/requirements.txt` — requests, pandas 추가
+- [x] D1 매출 CSV 적재 완료 (2022~2024년, 3개 파일)
+
+### DoD 검증 결과
+
+```
+fact_sales_area_qtr: 4,320 rows ✓
+dim_category:        59 rows ✓
+분기 커버리지:       12분기 (20221~20244)
+성수동 필터:         23개 상권, 264,259행 중 4,320행 추출
+```
+
+### 실행 방법
+
+```bash
+docker compose run --rm etl etl.load_sales
+```
+
+---
+
+---
+
+## 2026-01-31 — M1-7 품질 체크 완료
+
+### 상태: M1-7 DONE (M1 COMPLETE)
+
+### 완료한 작업
+
+- [x] M1-7: 데이터 품질 체크 + dim_category 검증
+  - `etl/quality/check_quality.py` — 7개 카테고리, 26개 체크 항목
+  - 행 수 검증 (7 테이블)
+  - PK 중복 검사 (3 fact 테이블) — 0건
+  - NULL 결측율 (6 컬럼) — 핵심 컬럼 0%, open_cnt/close_cnt 구조적 희소 75% (허용)
+  - 분기별 coverage — fact_flow 100%, fact_store 91.2%, fact_sales 15.7% (업종 희소)
+  - QoQ 이상치 — 매출 306건 (정보 제공), 유동인구 0건
+  - dim_category 참조 무결성 — orphan 0건
+  - dim_area 참조 무결성 — orphan 0건
+
+### DoD 검증 결과
+
+```
+26/26 checks passed
+- PK duplicates: 0 across all tables
+- NULL rate: core columns 0%, structural sparse ≤75.6% (threshold 80%)
+- Coverage: flow 100%, store 91.2%, sales 15.7% (sparse by nature)
+- Category/Area integrity: 0 orphans
+```
+
+### 실행 방법
+
+```bash
+docker compose run --rm --entrypoint python etl -m etl.quality.check_quality
+```
+
+### 참고사항
+
+- open_cnt/close_cnt는 서울 Open API D2 특성상 대부분의 업종에서 미제공 → threshold 80%로 완화
+- fact_sales coverage 15.7%는 23상권×100업종×15분기 중 실제 영업 조합만 존재하므로 정상
+- QoQ 매출 이상치 306건은 계절성/신규업종 등으로 인한 정상 변동 (hard fail 아님)
+
+---
+
+## 2026-01-31 — M2-2 Data API 완료
+
+### 상태: M2-2 DONE
+
+### 완료한 작업
+
+- [x] M2-2: Data API 엔드포인트 구현
+  - `backend/api/data.py` — categories, area-scope 엔드포인트
+  - `GET /api/data/categories` — dim_category 전체 목록 (100건)
+  - `GET /api/data/area-scope?area_type=` — preset_area_scope 조인 조회, area_type 필터 지원
+  - `backend/main.py` — data 라우터 등록
+- [x] backend requirements.txt에서 불필요한 geo 라이브러리(geopandas, fiona, pyproj, shapely) 제거 → Docker 빌드 성공
+
+### DoD 검증 결과
+
+```
+curl /api/data/categories     → 100개 업종 반환 ✓
+curl /api/data/area-scope     → 27개 영역 (4 행정동 + 23 상권) ✓
+curl /api/data/area-scope?area_type=ADMIN_DONG → 4개 ✓
+```
+
+---
+
+## 2026-01-31 — API 기반 데이터 적재 (M1-5, M1-6, M1-7)
+
+### 상태: M1 API 적재 COMPLETE
+
+### 완료한 작업
+
+- [x] 서울 Open API 공통 Collector 구현
+  - `etl/collectors/seoul_api_collector.py` — pagination, retry, rate limit
+  - API 서비스명 매핑: D1, D2, D5, D11, AREA_INFO
+- [x] D1 매출 API Loader 구현
+  - `etl/load_sales_api.py` — 분기별 API 호출 + 성수동 필터 + upsert
+  - 2025Q1 데이터 추가 적재 (361행)
+- [x] D5 유동인구 API Loader 구현
+  - `etl/load_flow_api.py` — 상권별 유동인구 + 시간대/요일/성연령별 집계
+  - 4개 분기 적재 (92행, 총 유동인구 91,600,320)
+- [x] D11 실시간 Collector 구현
+  - `etl/load_realtime_api.py` — 장소별 혼잡도 스냅샷
+  - 성수카페거리, 뚝섬역 테스트 성공
+  - dim_area에 REALTIME_PLACE 타입 추가
+- [x] D2 점포 API — 서비스명/행정동코드 수정 후 적재 완료 (1,459행)
+
+### DoD 검증 결과
+
+```
+fact_sales_area_qtr:            4,681 rows (2022Q1~2025Q1, 13분기)
+fact_flow_area_qtr:             92 rows (2024Q1~2024Q4, 4분기)
+fact_store_area_qtr:            1,459 rows (2024Q2~2025Q1, 4분기)
+fact_realtime_congestion_area:  2 rows (성수카페거리, 뚝섬역)
+dim_category:                   59 rows
+dim_area:                       30 rows (27 기존 + 2 REALTIME_PLACE)
+```
+
+### 실행 방법
+
+```bash
+# D1 매출 (분기 지정 가능)
+docker compose run --rm --entrypoint python etl -m etl.load_sales_api 20251
+
+# D5 유동인구 (분기 지정 가능)
+docker compose run --rm --entrypoint python etl -m etl.load_flow_api 20244 20243 20242 20241
+
+# D11 실시간 (장소 지정 가능)
+docker compose run --rm --entrypoint python etl -m etl.load_realtime_api "성수카페거리" "뚝섬역"
+
+# D2 점포 (현재 API 서버 오류)
+docker compose run --rm --entrypoint python etl -m etl.load_store_api 20244
+```
+
+### 데이터 수집/적재 현황 (업데이트)
+
+| 데이터셋 | raw | normalized | mart(H3) | 상태 |
+|---------|-----|-----------|----------|------|
+| D1 매출 | ✅ ZIP+API | ✅ fact_sales | - | 완료 (4,681행, 13분기) |
+| D2 점포 | ✅ API | ✅ fact_store | - | 완료 (1,459행, 4분기) |
+| D3 상권영역 | ✅ SHP | ✅ dim_area | - | 완료 (23개 상권) |
+| D5 유동 | ✅ API | ✅ fact_flow | - | 완료 (92행, 4분기) |
+| D9 행정동 | ✅ SHP | ✅ dim_area | - | 완료 (4개 행정동) |
+| D11 실시간 | ✅ API | ✅ fact_realtime | - | 완료 (2개 장소) |
+
+### 블로커
+
+- 없음
+
+### 참고사항
+
+- 서울 Open API 기본 URL: `http://openapi.seoul.go.kr:8088/{KEY}/json/{SERVICE}/{START}/{END}/{PARAMS}`
+- 1회 호출 최대 1,000건, 자동 페이지네이션 구현
+- D11 실시간은 장소별 1건씩 호출 필요
+
+---
+
+## 2026-01-31 — M2-1 Map API 완료
+
+### 상태: M2-1 COMPLETE
+
+### 완료한 작업
+
+- [x] M2-1: Map API 엔드포인트 구현 (4개 파일)
+  - `backend/db.py` — SQLAlchemy 엔진 + `get_db` FastAPI 의존성
+  - `backend/api/schemas.py` — Pydantic 응답 모델 (HexagonSummary, HexagonsResponse, FlowCard, SalesCard, CompetitionCard, GrowthCard, RiskCard, HexagonDetailResponse)
+  - `backend/api/map.py` — 두 엔드포인트 구현
+    - `GET /api/map/hexagons?area_type=&category=&qtr=` — H3 그리드 + 집계 메트릭 (weight 기반 분배)
+    - `GET /api/map/hexagon/{h3_index}` — 상세 6개 카드 (유동/매출/경쟁/성장/리스크) + QoQ 성장률
+  - `backend/main.py` — map 라우터 등록
+
+### 설계 결정
+
+- Sync SQLAlchemy + psycopg2 (데이터 소규모, async 불필요)
+- Raw SQL via `text()` (집계 조인에 ORM보다 명확)
+- Weight 기반 집계: `bridge_area_h3_weight.weight`로 영역→H3 분배
+- `data_asof`: 모든 응답에 분기 문자열 포함 (후행성 UX)
+- Risk 경고 기준: 폐업률 >15%, 매출/유동인구 QoQ -10% 이상 감소
+
+---
+
+## 2026-02-01 — M2-1 버그 수정 + API 테스트 가이드
+
+### 상태: M2-1 BUGFIX COMPLETE
+
+### 수정한 버그
+
+- [x] `backend/api/map.py` — `preset_area_scope` 조인 오류 (`area_code` → `area_id` 직접 조인)
+- [x] `backend/api/map.py` — `_prev_quarter` 분기 포맷 (`2024Q1` → `20241` 형식으로 수정)
+- [x] `backend/api/map.py` — `_agg` 함수 Decimal→float 변환 (DB NUMERIC 타입 호환)
+- [x] `backend/requirements.txt` — 불필요한 geo 라이브러리(geopandas, fiona, pyproj, shapely) 제거 → Docker 빌드 수정
+
+### 산출물
+
+- `docs/API_TEST.md` — API 엔드포인트별 curl 테스트 가이드
+
+### DoD 검증 결과
+
+```
+/health                                          → 200 OK ✓
+/api/data/categories                             → 100개 업종 ✓
+/api/data/area-scope                             → 27건 ✓
+/api/data/area-scope?area_type=ADMIN_DONG        → 4건 ✓
+/api/data/area-scope?area_type=COMMERCIAL_AREA   → 23건 ✓
+/api/map/hexagons?area_type=COMMERCIAL_AREA      → H3 그리드 반환 ✓
+/api/map/hexagon/{h3_index}                      → 상세 카드 반환 ✓
+```
+
+---
+
+## 2026-02-01 — M2-3 LangGraph 에이전트 완료
+
+### 상태: M2-3 DONE
+
+### 완료한 작업
+
+- [x] M2-3: LangGraph 에이전트 구현 (4개 파일)
+  - `backend/agents/graph.py` — AgentState TypedDict + StateGraph 정의 (supervisor → sql_agent/insight_agent 조건 분기)
+  - `backend/agents/supervisor.py` — GPT-4o-mini 기반 라우터 (sql/insight/both 분류)
+  - `backend/agents/sql_agent.py` — SQL 생성 + 안전 검증 (SELECT only, 테이블 화이트리스트, LIMIT 200) + DB 실행
+  - `backend/agents/insight_agent.py` — 구조화 응답 생성 (근거3 + 리스크2 + 추천2 + 체크리스트)
+
+### LangGraph 흐름
+
+```
+START → supervisor → conditional_edge
+  ├─ "sql"     → sql_agent → END
+  ├─ "insight" → insight_agent → END
+  └─ "both"    → sql_agent → insight_agent → END
+```
+
+### SQL 안전규칙
+
+- SELECT만 허용, DDL/DML 키워드 차단
+- 허용 테이블: dim_area, dim_category, fact_sales/flow/store, fact_realtime_congestion_area, bridge_area_h3_weight, preset_area_scope
+- LIMIT 없으면 자동 추가 (200)
+- 성수동 필터 프롬프트에 포함
+
+### 알려진 이슈 (M4에서 해결)
+
+- **SQL Agent `sql_result` 미반환**: SQL은 정상 생성되나 `state["sql_result"]`에 실행 결과가 리스트로 담기지 않음 → SSE `event: sql`의 `row_count`가 항상 0
+- **업종명 매칭 실패**: 사용자가 "커피 전문점", "디저트 카페"로 질의하면 DB의 실제 업종명(`커피-음료` 등)과 불일치하여 빈 결과 반환 → SQL Agent 프롬프트에 `dim_category` 조회 단계 추가 필요
+- **Insight Agent 환각**: SQL 결과가 비어도 LLM이 자체적으로 수치를 생성하여 응답 → SQL 결과 없을 시 "데이터 없음" 명시 로직 필요
+
+→ M4-1 골든 쿼리 회귀 테스트에서 함께 검증/수정 예정
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-02-01 — M2-4 Chat API 완료
+
+### 상태: M2-4 DONE (M2 COMPLETE)
+
+### 완료한 작업
+
+- [x] M2-4: POST /api/chat SSE 스트리밍 엔드포인트 구현
+  - `backend/api/chat.py` — SSE 스트리밍 엔드포인트
+    - `asyncio.to_thread`로 sync LangGraph를 non-blocking 실행
+    - 단계별 SSE 이벤트: routing → sql → insight → done (에러 시 error)
+    - Cache-Control, X-Accel-Buffering 헤더 설정
+  - `backend/api/schemas.py` — ChatRequest Pydantic 모델 추가
+  - `backend/main.py` — chat 라우터 등록
+
+### SSE 이벤트 형식
+
+```
+event: routing  → {"route": "sql"|"insight"|"both"}
+event: sql      → {"sql": "SELECT ...", "row_count": N}
+event: insight  → {"evidence": [...], "risks": [...], ...}
+event: done     → {"data_asof": "2025Q1"}
+event: error    → {"message": "..."}
+```
+
+### DoD 검증 결과 (E2E 테스트)
+
+```
+# 1. SQL 경로 (route: sql)
+POST /api/chat {"question": "성수동 디저트 카페 매출 Top3 알려줘"}
+→ event: routing {"route": "sql"}            ✓
+→ event: sql {"sql": "SELECT ...", "row_count": 0}  ✓ (SQL 생성 정상, row_count 이슈는 M4에서 수정)
+→ event: done {"data_asof": "2026-02-01 11:23"}     ✓
+
+# 2. Insight 경로 (route: insight)
+POST /api/chat {"question": "성수동에서 카페 창업하면 리스크가 뭐야?"}
+→ event: routing {"route": "insight"}        ✓
+→ event: insight {"evidence": [...], "risks": [...], "recommendations": [...], "checklist": [...], "summary": "..."} ✓
+→ event: done {"data_asof": "..."}           ✓
+
+# 3. Both 경로 (route: both)
+POST /api/chat {"question": "성수동에서 커피-음료 업종 매출이 가장 높은 상권 Top3 알려주고, 왜 그런지 분석해줘"}
+→ event: routing {"route": "both"}           ✓
+→ event: sql {"sql": "SELECT ..."}           ✓
+→ event: insight {"evidence": [...], ...}    ✓
+→ event: done {"data_asof": "..."}           ✓
+
+# 4. Validation
+POST /api/chat {"question": ""}  → 422 ✓
+
+# 5. 에러 핸들링 (API 키 미설정 시)
+→ event: error {"message": "내부 서버 오류가 발생했습니다."} ✓
+```
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-02-02 — M3-1 H3 위치 불일치 수정
+
+### 상태: M3-1 BUGFIX COMPLETE
+
+### 문제점
+
+- H3 hexagon이 실제 지도 위치와 맞지 않는 현상
+- 상권 및 행정동 경계는 정확하게 표시되나, H3 hexagon 위치가 어긋남
+
+### 근본 원인
+
+**좌표 순서 불일치**:
+- **h3-py (백엔드)**: `h3.h3_to_geo()` → `(lat, lng)` 반환
+- **h3-js (프론트엔드)**: `h3ToGeoBoundary()` → `[[lng, lat], [lng, lat], ...]` 반환 (GeoJSON 표준)
+- 프론트엔드가 boundary 좌표 배열을 `[lat, lng]`로 잘못 읽고 있었음
+
+**해상도 불일치**:
+- `HexMap.tsx`에서 `H3_RES = 10` 사용
+- 프로젝트 표준은 `res=10` (CLAUDE.md, h3_mapper.py 모두 10)
+
+### 수정 사항
+
+1. **좌표 순서 수정** (`HexMap.tsx` L215-219)
+   ```typescript
+   // 수정 전
+   const cLat = boundary.reduce((s, c) => s + c[0], 0) / boundary.length;
+   const cLng = boundary.reduce((s, c) => s + c[1], 0) / boundary.length;
+   
+   // 수정 후 (GeoJSON 표준 [[lng, lat], ...])
+   const cLng = boundary.reduce((s, c) => s + c[0], 0) / boundary.length;
+   const cLat = boundary.reduce((s, c) => s + c[1], 0) / boundary.length;
+   ```
+
+2. **H3 해상도 통일** (`HexMap.tsx` L23)
+   ```typescript
+   const H3_RES = 9;  // 10 → 9
+   ```
+
+### 수정 파일
+
+- `frontend/src/components/map/HexMap.tsx` — 좌표 순서 수정 + H3_RES 변경
+
+### 검증 방법
+
+1. 개발 서버 새로고침
+2. 성수역(127.0557, 37.5446) 주변 hexagon 위치 확인
+3. 연무장길(127.061, 37.5435) 주변 hexagon 위치 확인
+4. 행정동/상권 토글 후 경계선과 hexagon 오버레이 일치 확인
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-02-03 — M3-3 사이드바 카드 완료 + 버그 수정
+
+### 상태: M3-3 DONE + BUGFIX
+
+### 완료한 작업
+
+- [x] M3-3: Hex 클릭 → 사이드바 카드 구현
+  - `frontend/src/types/map.ts` — HexagonDetailResponse 타입 추가 (FlowCard, SalesCard, CompetitionCard, GrowthCard, RiskCard)
+  - `frontend/src/store/mapStore.ts` — sidebarOpen, hexDetail, hexDetailLoading 상태 + fetchHexDetail 액션 추가
+  - `frontend/src/components/sidebar/MetricCard.tsx` — **신규** 메트릭 카드 컴포넌트 (GrowthBadge, MiniChart, BarDistribution, StatRow, WarningList)
+  - `frontend/src/components/sidebar/Sidebar.tsx` — **신규** 사이드바 컴포넌트 (5개 카드: 유동/매출/경쟁/성장/리스크)
+  - `frontend/src/components/map/HexMap.tsx` — 클릭 시 fetchHexDetail 호출, 선택 해제 시 closeSidebar 호출
+  - `frontend/src/app/page.tsx` — Sidebar dynamic import 추가
+  - shadcn/ui 컴포넌트 설치: ScrollArea, Skeleton, Separator
+
+- [x] 버그 수정: 성장률 표시 (API 비율 → 퍼센트 변환)
+  - `MetricCard.tsx` GrowthBadge: `rate * 100`
+  - `Sidebar.tsx` GrowthStat: `rate * 100`
+
+- [x] 버그 수정: 필터 연동 (사이드바 API 호출 시 파라미터 전달)
+  - `fetchHexDetail`에 `area_type`, `qtr`, `category` 파라미터 추가
+  - `setAreaType`, `setCategory`, `setQuarter` 변경 시 사이드바 자동 갱신
+
+- [x] 상권별 점포 데이터 적재 (D2_STORE_TRDAR)
+  - `etl/collectors/seoul_api_collector.py` — D2_STORE_TRDAR API 추가 (VwsmTrdarStorQq)
+  - `etl/load_store_trdar_api.py` — **신규** 상권 기준 점포 ETL
+  - 적재 결과: COMMERCIAL_AREA 6,985행 (7분기, 17개 상권)
+
+- [x] 버그 수정: API area_type 필터링
+  - `backend/api/map.py` `/hexagon/{h3_index}` — area_type 파라미터 추가, 해당 타입만 조회
+
+- [x] 버그 수정: hexagons API 데이터 중복 합산
+  - 원인: 모든 area_type 합산 + 업종별 다중 행 cartesian product
+  - 해결: `hex_areas`를 area_type으로 필터 + `sales_agg`, `store_agg` CTE로 사전 집계
+
+### 산출물
+
+- `frontend/src/components/sidebar/Sidebar.tsx` — 메인 사이드바 (w-80, 5개 메트릭 카드)
+- `frontend/src/components/sidebar/MetricCard.tsx` — 재사용 가능한 카드 빌딩 블록
+- `etl/load_store_trdar_api.py` — 상권 기준 점포 ETL
+
+### DoD 검증
+
+```
+npm run build → 성공 ✓
+Hex 클릭 → 사이드바 열림 ✓
+5개 카드 표시 (유동/매출/경쟁/성장/리스크) ✓
+as-of 배지 표시 ✓
+선택 해제 → 사이드바 닫힘 ✓
+성장률 퍼센트 표시 ✓
+필터 변경 시 사이드바 갱신 ✓
+상권별 경쟁현황 개별 표시 (연무장길 1,525 vs 성수IT밸리 640) ✓
+```
+
+### 데이터 적재 현황 (업데이트)
+
+| 데이터셋 | area_type | 행 수 | 비고 |
+|---------|-----------|-------|------|
+| D1 매출 | COMMERCIAL_AREA | 4,681행 | 13분기 |
+| D2 점포 | ADMIN_DONG | 2,195행 | 4분기 |
+| D2 점포 | **COMMERCIAL_AREA** | **6,985행** | **7분기 (신규)** |
+| D5 유동 | COMMERCIAL_AREA | 92행 | 4분기 |
+
+### 블로커
+
+- 없음
+
+---
+
+## 전체 마일스톤 현황
+
+| 마일스톤 | 상태 | 완료 티켓 | 남은 티켓 |
+|---------|------|----------|----------|
+| M0 Repo/Infra | DONE | M0-1~M0-4 | M0-5 (P1, 선택) |
+| M1 Data Layer | DONE | M1-1~M1-8 | 없음 |
+| M2 API Layer | DONE | M2-1~M2-4 | 없음 |
+| M3 UI Layer | DONE | M3-1~M3-5 | 없음 |
+| M4 Eval/Logging | 미시작 | - | M4-1~M4-3 |
+
+## 다음 3개 액션
+
+1. **M4-1 골든 쿼리 테스트**: SQL Agent 품질 보증
+2. **M4-2 analysis_run 저장 로직**: 분석 결과 재현/감사
+3. **M4-3 이벤트 로그**: 사용자 행동 추적
+
+---
+
+## 2026-02-02 — 행정동 경계 + 상권 폴리곤 지도 표시
+
+### 상태: DONE
+
+### 완료한 작업
+
+- [x] GeoJSON 생성 스크립트 (`etl/export_boundaries_geojson.py`)
+  - D9 SHP → `frontend/public/data/admin_dong.geojson` (4개 행정동)
+  - D3 SHP → `frontend/public/data/commercial_areas.geojson` (17개 상권)
+  - 속성: code, name, type(상권유형), admin_dong(소속 행정동)
+- [x] HexMap.tsx에 Mapbox Source+Layer 기반 경계 레이어 추가
+  - 행정동 경계: fill(반투명) + line(색상별) + 라벨(중심점)
+  - 상권 영역: fill(유형별 색상) + line(점선) + 라벨(상권명 + 유형)
+  - 발달상권(파랑), 골목상권(초록), 전통시장(주황) 색상 구분
+- [x] 레이어 토글 UI (행정동/상권 on/off 버튼)
+  - `mapStore`에 `showAdminDong`, `showCommercialAreas` 상태 추가
+- [x] 범례에 상권 유형별 색상 표시 추가
+- [x] 기존 H3 헥사곤 레이어 유지 (상권 폴리곤 위에 반투명 오버레이)
+
+### 수정 파일
+
+| 파일 | 변경 |
+|------|------|
+| `etl/export_boundaries_geojson.py` | **신규** — SHP→GeoJSON 변환 |
+| `frontend/public/data/admin_dong.geojson` | **신규** — 4개 행정동 경계 |
+| `frontend/public/data/commercial_areas.geojson` | **신규** — 17개 상권 폴리곤 |
+| `frontend/src/store/mapStore.ts` | showAdminDong/showCommercialAreas 토글 추가 |
+| `frontend/src/components/map/HexMap.tsx` | 경계 레이어 + 토글 + 범례 추가 |
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-02-02 — M3-1 HexMap 개선 (상권-H3 연동 완료)
+
+### 상태: M3-1 AREA INTEGRATION DONE
+
+### 완료한 작업
+
+- [x] Backend API 수정: HexagonSummary에 area_id, area_name, real_name 추가
+  - `backend/api/schemas.py` — HexagonSummary 필드 추가
+  - `backend/api/map.py` — SQL 쿼리에 primary_area CTE 추가 (area_type별 필터링)
+- [x] DB 스키마 수정: dim_area에 real_name 칼럼 추가
+  - 17개 상권에 실제 상권명 매핑 (예: 성수역→연무장길, 뚝섬역→뚝섬 카페거리)
+- [x] Frontend 수정: zone 기반 → area_id/area_name 기반으로 변경
+  - `frontend/src/types/map.ts` — area_id, area_name, real_name 필드 추가
+  - `frontend/src/store/mapStore.ts` — selectedAreaId, selectedAreaName, selectedRealName 상태 추가
+  - `frontend/src/components/map/HexMap.tsx` — 툴팁/인디케이터에 real_name 우선 표시
+- [x] 상권 미포함 hexagon 회색 처리 (area_name === null → 회색)
+
+### real_name 매핑 (17개 상권)
+
+| 공공데이터 상권명 | 실제 상권명 (real_name) |
+|------------------|------------------------|
+| 성수역 | 연무장길 |
+| 뚝섬역 | 뚝섬 카페거리 |
+| 서울숲역 | 서울숲 입구 |
+| 성수초등학교 | 성수IT밸리 |
+| 성원어린이공원 | 헤이그라운드/팝업 |
+| 성수2가3동주민센터 | 대림창고 일대 |
+| 성수역 골목형상점가 | 수제화거리 |
+| 성수119안전센터 | 수제화 공방거리 |
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-02-02 — D2 점포 데이터 적재 완료
+
+### 상태: D2 ETL COMPLETE
+
+### 문제 및 해결
+
+**문제**: `fact_store_area_qtr` 테이블이 비어있어 점포수가 0으로 표시
+
+**원인**: 
+1. D2 점포 API가 아직 호출되지 않음
+2. `dim_area` 행정동 코드 불일치 (DB: `1104xxxx` vs API: `1120xxxx`)
+
+**해결**:
+1. `dim_area` 행정동 코드 수정: `1104xxxx` → `1120xxxx`
+2. `etl/load_store_api.py` 실행
+
+### 적재 결과
+
+```
+fact_store_area_qtr: 1,459 rows
+  - 20251: 367 rows
+  - 20244: 364 rows
+  - 20243: 363 rows
+  - 20242: 365 rows
+```
+
+### 실행 방법
+
+```bash
+docker compose run --rm --entrypoint python etl -m etl.load_store_api
+```
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-02-02 — H3 데이터 모델 문서화
+
+### 상태: DONE
+
+### 완료한 작업
+
+- [x] `docs/H3_DATA_MODEL.md` — H3 weight 매핑 원리 상세 설명서 작성
+  - Weight = hexagon과 상권/행정동 겹침 비율 (0.0~1.0)
+  - 동일 상권이라도 hexagon 위치(중심/경계)에 따라 값이 다른 이유 설명
+  - SQL 집계 로직, 시각화 의미 해석, FAQ 포함
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-02-02 — M3-2 필터 패널 + 영역 토글 완료
+
+### 상태: M3-2 DONE
+
+### 완료한 작업
+
+- [x] shadcn/ui 컴포넌트 설치 (Select, Button, Card, Badge, Label)
+- [x] `types/map.ts` — Category, AreaScopeItem 타입 추가
+- [x] `store/mapStore.ts` — categories/areas 상태 + fetchCategories/fetchAreas 액션 추가
+- [x] `components/filters/FilterPanel.tsx` — 신규 생성
+  - 업종 Select (전체 + API 카테고리 목록)
+  - 분기 Select (최근 8분기 자동 생성)
+  - 행정동/상권 토글 (Button variant 활용)
+  - 마운트 시 categories/areas API fetch
+- [x] `app/page.tsx` — flex 레이아웃 (좌측 FilterPanel w-72 + 우측 HexMap flex-1)
+- [x] `components/map/HexMap.tsx` — 필터 파라미터(areaType, category, quarter) API 연동
+- [x] deck.gl 타입 선언 파일 추가 (`types/deck.gl.d.ts`)
+
+### 수정 파일
+
+| 파일 | 변경 |
+|------|------|
+| `frontend/src/types/map.ts` | Category, AreaScopeItem 타입 추가 |
+| `frontend/src/types/deck.gl.d.ts` | 신규 — deck.gl 모듈 타입 선언 |
+| `frontend/src/store/mapStore.ts` | categories/areas 상태, fetch 액션 추가 |
+| `frontend/src/components/filters/FilterPanel.tsx` | **신규** 필터 패널 |
+| `frontend/src/components/ui/` | shadcn/ui 5개 컴포넌트 설치 |
+| `frontend/src/app/page.tsx` | flex 레이아웃 변경 |
+| `frontend/src/components/map/HexMap.tsx` | 필터 파라미터 API 연동, 컨테이너 사이징 수정 |
+
+### DoD 검증
+
+```
+npm run build → 성공 ✓
+FilterPanel 렌더링 (업종/분기 Select, 영역 토글) ✓
+필터 변경 → mapStore 상태 업데이트 → HexMap useEffect 재트리거 ✓
+```
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-02-03 — mapbox-gl CSS 임포트 수정
+
+### 상태: DONE
+
+### 문제점
+
+- `Module not found: Can't resolve 'mapbox-gl/dist/mapbox-gl.css'` 빌드 에러
+- mapbox-gl v3.18.1 설치되어 있고 CSS 파일도 존재하나 Next.js에서 해석 실패
+
+### 근본 원인
+
+- Next.js에서는 node_modules 내 CSS를 컴포넌트 파일에서 직접 import 불가
+- global CSS 파일(`globals.css`)에서만 외부 CSS import 허용
+
+### 해결
+
+1. `HexMap.tsx`에서 `import "mapbox-gl/dist/mapbox-gl.css";` 제거
+2. `globals.css` 최상단에 `@import "mapbox-gl/dist/mapbox-gl.css";` 추가
+
+### 수정 파일
+
+| 파일 | 변경 |
+|------|------|
+| `frontend/src/components/map/HexMap.tsx` | mapbox-gl CSS import 라인 제거 |
+| `frontend/src/app/globals.css` | `@import "mapbox-gl/dist/mapbox-gl.css";` 추가 |
+
+### 검증
+
+```
+npm run build → 성공 ✓
+```
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-02-01 — M3-1 Deck.gl 3D Hex 맵 완료
+
+### 상태: M3-1 DONE
+
+### 완료한 작업
+
+- [x] M3-1: Deck.gl 3D Hex 맵 구현 (5개 파일)
+  - `frontend/src/types/map.ts` — HexagonSummary, HexagonsResponse, MapViewState 타입 정의
+  - `frontend/src/store/mapStore.ts` — Zustand 상태 관리 (selectedHex, areaType, category, quarter, elevationMetric)
+  - `frontend/src/components/map/HexMap.tsx` — 핵심 맵 컴포넌트
+    - MapLibre GL + CARTO dark-matter 무료 타일 (Mapbox 토큰 불필요)
+    - ColumnLayer (diskResolution=6, radius=85m)
+    - elevation: 유동인구/매출 토글 (우상단 버튼)
+    - color: sales_amt 기준 파랑→노랑→빨강 스케일
+    - onClick → mapStore.setSelectedHex
+    - hover 툴팁 (매출/유동인구/점포수)
+    - API fetch with mock data fallback
+  - `frontend/src/app/page.tsx` — dynamic import (SSR 비활성화)
+  - `frontend/src/app/layout.tsx` — 메타데이터 "K-CIA Lite"
+
+### 기술 결정
+
+- **MapLibre GL + CARTO 타일**: 무료, Mapbox 토큰 불필요
+- **ColumnLayer**: H3HexagonLayer 대신 사용 (API가 lat/lng 제공하므로 더 단순)
+- **Mock 데이터**: API 미연결 시 성수동 12개 헥사곤 샘플로 렌더링
+- **dynamic import**: Deck.gl SSR 비호환 → `next/dynamic`으로 클라이언트 전용 로드
+
+### DoD 검증
+
+```
+npm run build → 성공 ✓
+ColumnLayer 렌더링 → 성수동 중심 3D 헥사곤 ✓
+elevation 토글 → 유동인구/매출 전환 ✓
+hover 툴팁 → 매출/유동인구/점포수 표시 ✓
+onClick → console.log h3_index ✓
+```
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-02-03 — M3-4 챗봇 UI 완료
+
+### 상태: M3-4 DONE
+
+### 완료한 작업
+
+- [x] M3-4: 챗봇 UI (스트리밍) 구현 (10개 파일)
+  - `frontend/src/types/chat.ts` — ChatMessage, SSE 이벤트 타입 정의
+  - `frontend/src/store/chatStore.ts` — Zustand 챗 상태 (messages, isStreaming, isOpen 등)
+  - `frontend/src/hooks/useStreamingChat.ts` — SSE 스트리밍 훅 (AbortController, 이벤트 파싱)
+  - `frontend/src/components/chat/ChatPanel.tsx` — 플로팅 버튼 + 확장/축소 패널
+  - `frontend/src/components/chat/ChatInput.tsx` — 입력창 (Enter 전송, 취소 버튼)
+  - `frontend/src/components/chat/ChatMessages.tsx` — 메시지 목록 + 자동 스크롤
+  - `frontend/src/components/chat/ChatMessage.tsx` — 개별 메시지 (구조화 응답 렌더링)
+  - `frontend/src/components/chat/insight/EvidenceCard.tsx` — 근거 카드
+  - `frontend/src/components/chat/insight/RisksCard.tsx` — 리스크 카드
+  - `frontend/src/components/chat/insight/RecommendationsCard.tsx` — 추천 카드
+  - `frontend/src/components/chat/insight/ChecklistCard.tsx` — 체크리스트 카드
+  - `frontend/src/components/chat/insight/SqlCard.tsx` — SQL 쿼리 카드
+  - `frontend/src/app/page.tsx` — ChatPanel dynamic import 추가
+- [x] ESLint warning 수정 (useStreamingChat.ts handleEvent 의존성)
+
+### 기능 상세
+
+- **플로팅 버튼**: 우하단 고정, 클릭 시 패널 열림
+- **확장/축소**: 400px ↔ 500px 너비, 500px ↔ 600px 높이
+- **대화 초기화**: 휴지통 버튼으로 메시지 클리어
+- **SSE 스트리밍**: routing → sql → insight → done 순서로 이벤트 처리
+- **구조화 응답**: 근거3 + 리스크2 + 추천2 + 체크리스트 카드 형태로 렌더링
+- **as-of 배지**: 응답 하단에 "기준: {timestamp}" 표시
+- **필터 연동**: 현재 선택된 area_type, category, qtr를 API 요청에 포함
+
+### DoD 검증
+
+```
+npm run build → 성공 (ESLint warning 0개) ✓
+curl /api/chat → SSE 스트리밍 정상 ✓
+플로팅 버튼 렌더링 ✓
+질문 입력 → 스트리밍 응답 표시 ✓
+구조화 카드 (Evidence/Risks/Recommendations/Checklist) 렌더링 ✓
+as-of 배지 표시 ✓
+```
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-02-03 — M3-5 as-of 배지 검증 완료
+
+### 상태: M3-5 DONE
+
+### 완료한 작업
+
+- [x] M3-5: as-of 배지 구현 확인
+  - `Sidebar.tsx` — 사이드바 카드에 분기 배지 + as-of 텍스트 표시
+  - `ChatMessage.tsx` — 챗봇 응답에 "기준: {dataAsof}" 배지 표시
+- [x] 모든 데이터 표시 영역에 as-of 배지 존재 확인
+
+### 참고사항
+
+- 후행성 경고 배너, D11 실시간 확인 버튼은 P1 (Should) 항목으로 추후 구현 가능
+- 현재 기본 요구사항(as-of 배지)은 완료
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-02-03 — M4-1 골든 쿼리 테스트 완료
+
+### 상태: M4-1 DONE
+
+### 완료한 작업
+
+- [x] 골든 쿼리 3종 정의 및 테스트 파일 생성
+  - `tests/golden_queries/golden_queries.json` — TopN 매출, QoQ 비교, 적합도 점수
+  - `tests/test_sql_agent.py` — Validation + Integration 테스트 스크립트
+- [x] 버그 수정: sql_result row_count 미반환
+  - `backend/api/chat.py` — dict 구조의 row_count 정확히 추출
+- [x] 업종명 fuzzy 매칭 로직 추가
+  - `backend/agents/sql_agent.py` — 프롬프트에 Category Name Mapping 섹션 추가
+  - 커피/카페 → '커피-음료', 디저트/베이커리 → '제과점' 등 14개 매핑
+- [x] Insight Agent 환각 방지
+  - `backend/agents/insight_agent.py` — SQL 결과 없을 시 "조회된 데이터가 없습니다" 명시
+  - row_count 정보를 명시적으로 전달
+
+### 테스트 결과
+
+```
+============================================================
+Golden Query Validation Tests (DB Direct)
+============================================================
+[PASS] TopN 매출 추천: 3 rows | area_name=뚝섬역, sales_amt=3604512060...
+[PASS] QoQ 비교: 10 rows | area_name=뚝섬역, curr_sales=3604512060...
+[PASS] 적합도 점수 (창업 추천): 5 rows | area_name=성수역, sales_amt=1233919264...
+============================================================
+Validation Results: 3 passed, 0 failed
+============================================================
+
+============================================================
+SQL Agent Integration Tests (via API)
+============================================================
+[PASS] TopN 매출 추천: route=sql, rows=3, patterns=6/6
+[PASS] QoQ 비교: route=sql, rows=14, patterns=3/3
+[PASS] 적합도 점수 (창업 추천): route=both, rows=3, patterns=2/2
+============================================================
+Integration Results: 3 passed, 0 failed
+============================================================
+```
+
+### 실행 방법
+
+```bash
+docker compose run --rm --entrypoint bash etl -c "cd /workspace && python tests/test_sql_agent.py"
+docker compose run --rm --entrypoint bash etl -c "cd /workspace && python tests/test_sql_agent.py --integration"
+```
+
+### 수정 파일
+
+| 파일 | 변경 |
+|------|------|
+| `tests/golden_queries/golden_queries.json` | **신규** — 골든 쿼리 3종 정의 |
+| `tests/test_sql_agent.py` | **신규** — 테스트 스크립트 |
+| `backend/api/chat.py` | row_count 버그 수정 (dict 구조 처리) |
+| `backend/agents/sql_agent.py` | Category Name Mapping, 테이블 컬럼 설명 추가 |
+| `backend/agents/insight_agent.py` | 환각 방지 로직, row_count 명시 전달 |
+
+### DoD 검증
+
+```
+Validation: 3/3 통과 ✓
+Integration: 3/3 통과 ✓
+```
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-02-03 — AI Agent 메모리 기능 완료
+
+### 상태: MEMORY FEATURE DONE
+
+### 완료한 작업
+
+- [x] Backend: ChatRequest에 messages 필드 추가 (`backend/api/schemas.py`)
+- [x] Backend: AgentState에 messages 필드 추가 (`backend/agents/graph.py`)
+- [x] Backend: chat.py에서 messages를 state로 전달 (`backend/api/chat.py`)
+- [x] Backend: SQL Agent에 대화 히스토리 컨텍스트 전달 (`backend/agents/sql_agent.py`)
+- [x] Backend: Insight Agent에 대화 히스토리 컨텍스트 전달 (`backend/agents/insight_agent.py`)
+- [x] Frontend: ChatMessagePayload 타입 추가 (`frontend/src/types/chat.ts`)
+- [x] Frontend: ChatRequest에 messages 필드 추가 (`frontend/src/types/chat.ts`)
+- [x] Frontend: useStreamingChat에서 최근 6개 메시지를 API payload에 포함 (`frontend/src/hooks/useStreamingChat.ts`)
+
+### 기능 상세
+
+- 후속 질문 시 이전 대화 컨텍스트 유지 (예: "뚝섬역 카페 매출 알려줘" → "성수역은?")
+- 최근 6개 메시지만 전달하여 토큰 절약
+- user/assistant 메시지만 필터링 (system 제외)
+
+### 수정 파일
+
+| 파일 | 변경 |
+|------|------|
+| `frontend/src/types/chat.ts` | ChatMessagePayload, ChatRequest.messages 추가 |
+| `frontend/src/hooks/useStreamingChat.ts` | historyMessages 구성, payload에 포함 |
+
+### DoD 검증
+
+```
+npm run build → 성공 (ESLint warning 0개) ✓
+```
+
+### 테스트 방법
+
+```bash
+# 테스트 시나리오
+# 1. "뚝섬역 카페 매출 알려줘"
+# 2. "성수역은?" (후속 질문 - 컨텍스트 유지 확인)
+```
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-02-03 — AI Agent 품질 개선 (라우팅, 계산, Fallback)
+
+### 상태: AGENT QUALITY IMPROVEMENTS DONE
+
+### 발견된 이슈
+
+| # | 이슈 | 원인 |
+|---|------|------|
+| 1 | route="sql"일 때 insight 미반환 | insight_agent 스킵 → 빈 응답 |
+| 2 | "카페별 1일 매출" 계산 오류 | sales_cnt/store_cnt 혼동, 1일 계산 로직 없음 |
+| 3 | 라우팅이 "sql"로 너무 자주 분류 | 기본값이 "insight"여서 both 누락 |
+
+### 수정 내용
+
+1. **chat.py — Fallback Insight 추가**
+   - route="sql"이어도 결과가 있으면 fallback insight 생성
+   - 상위 5개 결과 샘플 + row_count 요약
+   - SQL 에러 시에도 에러 메시지를 insight로 반환
+
+2. **supervisor.py — 라우팅 개선**
+   - 기본값을 "insight" → "both"로 변경
+   - "sql" 조건을 강화: "숫자만", "데이터만", "쿼리만" 명시적 요청만
+   - "궁금해", "알려줘" 등은 무조건 "both"
+
+3. **sql_agent.py — 계산 가이드 추가**
+   - `sales_cnt` vs `store_cnt` 차이 명확화 (거래건수 vs 점포수)
+   - "1일" 계산 = `/ 90` (분기 ≈ 90일)
+   - "카페별" 계산 = `/ NULLIF(store_cnt, 0)`
+   - 예제 SQL 추가: 카페별 1일 매출 쿼리
+
+### 수정 파일
+
+| 파일 | 변경 |
+|------|------|
+| `backend/api/chat.py` | route=sql fallback insight 로직 추가 (20줄) |
+| `backend/agents/supervisor.py` | 라우팅 프롬프트 개선, 기본값 both |
+| `backend/agents/sql_agent.py` | 계산 가이드 섹션 추가 (35줄) |
+
+### 테스트 결과
+
+```bash
+# 이전 (오류)
+Q: "전체카페가 아니라 한개의 카페 기준으로 궁금한거야. 그것도 하루매출"
+→ route: "sql", insight: (없음)
+
+# 수정 후 (정상)
+Q: 동일
+→ route: "both"
+→ SQL: ROUND(fs.sales_amt / NULLIF(fst.store_cnt, 0) / 90) AS daily_sales_per_store
+→ insight: "뚝섬역 하루 매출 616,155원..." ✓
+
+# Fallback 테스트
+Q: "매출 숫자만 알려줘"
+→ route: "sql"
+→ insight: "SQL 쿼리 결과 200건이 조회되었습니다..." ✓ (fallback 작동)
+```
+
+### 블로커
+
+- 없음
+
+---
+
+## 전체 마일스톤 현황
+
+| 마일스톤 | 상태 | 완료 티켓 | 남은 티켓 |
+|---------|------|----------|----------|
+| M0 Repo/Infra | DONE | M0-1~M0-4 | M0-5 (P1, 선택) |
+| M1 Data Layer | DONE | M1-1~M1-8 | 없음 |
+| M2 API Layer | DONE | M2-1~M2-4 | 없음 |
+| M3 UI Layer | DONE | M3-1~M3-5 | 없음 |
+| M4 Eval/Logging | DONE | M4-1~M4-3 | 없음 |
+
+## 다음 3개 액션
+
+1. **M0-5 DB 마이그레이션/CI**: Alembic 또는 Supabase migrations 선정
+2. **API 스모크 테스트**: /api/chat, /api/events 로컬 확인
+3. **운영 준비**: 문서 정리, 배포 설정
+
+---
+
+## 2026-02-03 — 챗봇 컨텍스트 개선
+
+### 완료한 작업
+
+- [x] 선택 상권 카드 데이터를 /api/chat 요청에 포함하여 챗봇 컨텍스트로 활용
+- [x] Insight Agent가 선택 카드 데이터를 참고하도록 입력 메시지 보강
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-02-04 — M5 점포 수 기반 H3 Weight 구현
+
+### 상태: M5 CODE COMPLETE (테스트 대기)
+
+### 완료한 작업
+
+- [x] M5-1: DB 스키마 추가
+  - `backend/migrations/003_store_h3_weight.sql` 작성
+  - 3개 테이블: raw_semas_store, fact_store_h3_count, bridge_area_h3_weight_store
+- [x] M5-2: 소상공인 API Collector
+  - `etl/collectors/semas_api_collector.py` 구현
+  - 페이지네이션, 재시도, Rate limiting 포함
+- [x] M5-3: 점포 수집 ETL
+  - `etl/load_semas_stores.py` 구현
+  - 좌표 검증 (서울 범위), H3 변환 (res=10)
+- [x] M5-4: H3 점포 집계
+  - `etl/load_store_h3_count.py` 구현
+- [x] M5-5: 점포 기반 Weight 계산
+  - `etl/compute_store_weight.py` 구현
+  - 상권별 H3 weight = 점포 수 비율
+- [x] M5-6: API 수정
+  - `backend/api/map.py` — weight_type 파라미터 추가
+  - `backend/api/schemas.py` — weight_type 응답 필드 추가
+- [x] etl/config.py에 SEMAS_API 설정 추가
+- [x] .env.example에 SEMAS_API_KEY 추가
+
+### 산출물
+
+| 파일 | 작업 |
+|------|------|
+| `backend/migrations/003_store_h3_weight.sql` | **신규** - 3개 테이블 DDL |
+| `etl/collectors/semas_api_collector.py` | **신규** - 소상공인 API 수집기 |
+| `etl/load_semas_stores.py` | **신규** - 점포 수집 ETL |
+| `etl/load_store_h3_count.py` | **신규** - H3 점포 집계 |
+| `etl/compute_store_weight.py` | **신규** - Weight 계산 |
+| `etl/config.py` | **수정** - SEMAS_API_KEY 추가 |
+| `backend/api/map.py` | **수정** - weight_type 파라미터 |
+| `backend/api/schemas.py` | **수정** - weight_type 응답 필드 |
+| `.env.example` | **수정** - SEMAS_API_KEY 추가 |
+
+### 실행 순서
+
+```bash
+# 1. DB 마이그레이션
+psql -U kcia -d kcia -f backend/migrations/003_store_h3_weight.sql
+
+# 2. 점포 데이터 수집 (SEMAS_API_KEY 필요)
+docker compose run --rm --entrypoint python etl -m etl.load_semas_stores
+
+# 3. H3별 점포 수 집계
+docker compose run --rm --entrypoint python etl -m etl.load_store_h3_count
+
+# 4. 점포 기반 weight 계산
+docker compose run --rm --entrypoint python etl -m etl.compute_store_weight
+```
+
+### API 사용법
+
+```bash
+# 점포 기반 weight (기본값)
+curl "http://localhost:8000/api/map/hexagons?area_type=COMMERCIAL_AREA&weight_type=store"
+
+# 면적 기반 weight
+curl "http://localhost:8000/api/map/hexagons?area_type=COMMERCIAL_AREA&weight_type=area"
+```
+
+### 블로커
+
+- SEMAS_API_KEY 발급 필요 (공공데이터포털)
+
+### 다음 단계
+
+- M5-7: 품질 검증 (면적 vs 점포 weight 비교 리포트)

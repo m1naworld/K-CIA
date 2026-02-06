@@ -18,7 +18,7 @@
 ## 확정사항 (반드시 준수)
 
 1. **영역 기준**: 행정동 + 상권코드 둘 다 지원. UI 토글로 전환. `dim_area(area_type)` 이원화
-2. **H3 해상도**: 기본 res=9. 성능 문제 시 res=8 / 정밀 분석 시 res=10 실험 플래그
+2. **H3 해상도**: 기본 res=10. 성능 문제 시 res=9 / res=8 다운그레이드 가능
 3. **유튜브/소셜**: 옵션 모듈. OFF여도 모든 Q&A/추천이 공공데이터만으로 성립해야 함
 4. **후행성 UX**: 모든 카드/응답에 as-of 배지(데이터 기준시점) 표시. D11(실시간) 보정 카드 제공
 5. **DB**: PostgreSQL + PostGIS + pgvector / Supabase 호환
@@ -138,7 +138,7 @@ K-CIA/
 - `fact_realtime_congestion_area(area_id, ts, congestion_level, ppltn_min, ppltn_max)`
 
 ### 브릿지/메타
-- `bridge_area_h3_weight(area_id, h3_index, weight)` — 폴리곤→H3(res=9) 매핑
+- `bridge_area_h3_weight(area_id, h3_index, weight)` — 폴리곤→H3(res=10) 매핑
 - `analysis_run(run_id, question, params_json, sql_text, result_json, assumptions_json, data_asof)`
 - `ingest_runs`, `raw_objects`, `schema_registry` — 수집 메타
 

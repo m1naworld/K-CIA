@@ -28,7 +28,7 @@
 3) **Raw Storage**: Supabase Storage(bucket: `raw/`)  
 4) **Staging DB(Postgres)**: `stg_*` (원본 스키마 최대 유지)  
 5) **Warehouse(모델링)**: `dim_*`, `fact_*`, `bridge_*`  
-6) **Derived/Serving**: `agg_*`(Hex res=9 기본), `mv_*`(materialized view)  
+6) **Derived/Serving**: `agg_*`(Hex res=10 기본), `mv_*`(materialized view)  
 
 ### 1.2 수집 파이프라인(표준 흐름)
 **(A) Discover** 최신 버전 탐지(수정일, 파일명, 기준 분기)  
@@ -37,7 +37,7 @@
 → **(D) Parse** unzip/CSV parse/JSON normalize  
 → **(E) Load stg** COPY 로딩(대량) + 스키마 드리프트 감지  
 → **(F) Upsert fact/dim** 키 기반 Upsert + 파티셔닝(분기)  
-→ **(G) Build aggregates** 최근 4개 분기 + QoQ, TopN, Hex res=9  
+→ **(G) Build aggregates** 최근 4개 분기 + QoQ, TopN, Hex res=10  
 → **(H) Quality & Alert** rowcount/NULL/범위 체크 + 알림
 
 ---
@@ -189,7 +189,7 @@
 ### Sprint 2 (지도/공간 + nowcast, 1~2주)
 - [ ] D3(영역-상권) + `dim_area` 적재  
 - [ ] 행정동(성수 4개) 경계 연결(폴리곤 확보)  
-- [ ] H3 res=9 Hex 집계(최근 4개 분기)  
+- [ ] H3 res=10 Hex 집계(최근 4개 분기)  
 - [ ] D11 실시간 도시데이터 수집 + 스냅샷 저장
 
 ### Sprint 3 (임대/투자 + 유튜브 옵션, 1~2주)

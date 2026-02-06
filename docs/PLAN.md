@@ -37,7 +37,7 @@
 | 확정사항 | 반영 |
 |---------|------|
 | 행정동 + 상권코드 둘 다 지원(토글) | `dim_area(area_type)` 이원화 + UI 토글 — M1/M3에서 구현 |
-| H3 기본 res=9 | `bridge_area_h3_weight` 생성 시 res=9 사용 — M1에서 구현 |
+| H3 기본 res=10 | `bridge_area_h3_weight` 생성 시 res=10 사용 — M1에서 구현 |
 | 유튜브/소셜 OFF여도 Q&A 성립 | Supervisor → SQL Agent + Insight Agent만으로 완결 설계 — M2에서 구현 |
 | 후행성 as-of 배지/경고/D11 보정 | 모든 카드에 `data_asof` 표시, D11은 Should(있으면 보정 카드) — M3에서 구현 |
 | DB: Postgres + pgvector / Supabase 호환 | DDL은 Supabase 호환 SQL — M0/M1에서 구현 |
@@ -83,7 +83,7 @@
 | | - [ ] D9(행정동 SHP) 적재 → `dim_area(area_type='ADMIN_DONG')` |
 | | - [ ] D3(상권영역) 적재 → `dim_area(area_type='COMMERCIAL_AREA')` |
 | | - [ ] `preset_area_scope` 테이블 생성 + 성수동 프리셋(4개 행정동 + 주요 상권코드) 적재 |
-| | - [ ] H3 polyfill(res=9): `dim_area` → `bridge_area_h3_weight` 생성 |
+| | - [ ] H3 polyfill(res=10): `dim_area` → `bridge_area_h3_weight` 생성 |
 | | - [ ] D1(매출) ETL: raw → `fact_sales_area_qtr` (성수동 필터, 최근 8분기) |
 | | - [ ] D5(유동) ETL: raw → `fact_flow_area_qtr` (성수동 필터, 최근 8분기) |
 | | - [ ] D2(점포) ETL: raw → `fact_store_area_qtr` (성수동 필터, 최근 8분기) |
