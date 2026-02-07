@@ -9,6 +9,7 @@ from langgraph.graph import END, StateGraph
 from agents.insight_agent import insight_agent_node
 from agents.sql_agent import sql_agent_node
 from agents.supervisor import supervisor_node
+from agents.content_agent import content_agent_node
 
 
 class AgentState(TypedDict, total=False):
@@ -16,10 +17,11 @@ class AgentState(TypedDict, total=False):
 
     question: str
     messages: list[dict]  # Conversation history: [{"role": "user"|"assistant", "content": "..."}]
-    route: str  # "sql" | "insight" | "both"
+    route: str  # "sql" | "insight" | "both" | "content"
     sql_text: str | None
     sql_result: Any
     insight: dict | None
+    content_brief: dict | None
     data_asof: str | None
     selected_hex_detail: dict | None
 
@@ -31,13 +33,18 @@ def _route_after_supervisor(state: AgentState) -> str:
         return "sql_agent"
     if route == "both":
         return "sql_agent"
+    if route == "content":
+        return "sql_agent"  # content needs data first
     return "insight_agent"
 
 
 def _route_after_sql(state: AgentState) -> str:
     """After SQL agent: go to END or insight_agent depending on route."""
-    if state.get("route") == "both":
+    route = state.get("route")
+    if route == "both":
         return "insight_agent"
+    if route == "content":
+        return "content_agent"
     return END
 
 
@@ -48,19 +55,28 @@ def build_graph() -> Any:
     graph.add_node("supervisor", supervisor_node)
     graph.add_node("sql_agent", sql_agent_node)
     graph.add_node("insight_agent", insight_agent_node)
+    graph.add_node("content_agent", content_agent_node)
 
     graph.set_entry_point("supervisor")
 
     graph.add_conditional_edges(
         "supervisor",
         _route_after_supervisor,
-        {"sql_agent": "sql_agent", "insight_agent": "insight_agent"},
+        {
+            "sql_agent": "sql_agent",
+            "insight_agent": "insight_agent",
+        },
     )
     graph.add_conditional_edges(
         "sql_agent",
         _route_after_sql,
-        {"insight_agent": "insight_agent", END: END},
+        {
+            "insight_agent": "insight_agent",
+            "content_agent": "content_agent",
+            END: END,
+        },
     )
     graph.add_edge("insight_agent", END)
+    graph.add_edge("content_agent", END)
 
     return graph.compile()

@@ -50,6 +50,39 @@ When SQL returns multiple rows for recommendation:
   "checklist": ["확인 필요 사항"]
 }
 
+### For Operation Strategy Questions (운영전략, 피크타임, 인력, 영업시간)
+{
+  "summary": "운영전략 요약",
+  "peak_analysis": {
+    "peak_hours": ["14시", "15시", "16시"],
+    "off_peak_hours": ["6시", "7시"],
+    "weekday_peak": "토요일",
+    "target_demo": "20-30대 여성"
+  },
+  "recommendations": [
+    {"type": "인력", "detail": "피크타임(14-17시) 인력 +1명 권장"},
+    {"type": "프로모션", "detail": "오프피크(10-12시) 할인 이벤트"}
+  ],
+  "evidence": ["피크타임 유동인구 비중 42%"],
+  "risks": ["주말 집중 리스크"],
+  "assumptions": ["객단가 12,000원 가정", "회전율 2.5회/좌석"]
+}
+
+### For Risk Analysis Questions (리스크, 폐업, 경쟁과밀, 포화)
+{
+  "summary": "리스크 진단 결론",
+  "risk_score": 0.65,
+  "risk_breakdown": [
+    {"factor": "폐업률", "contribution": 0.3, "detail": "폐업률 18.5%"},
+    {"factor": "매출 감소", "contribution": 0.25, "detail": "QoQ -12.3%"},
+    {"factor": "경쟁 과밀", "contribution": 0.1, "detail": "점포 +15% 증가"}
+  ],
+  "alternative_areas": ["연무장길 (리스크 0.2, 매출 35.6억)", "서울숲 입구 (리스크 0.15, 매출 12.3억)"],
+  "evidence": ["데이터 기반 사실"],
+  "recommendations": ["구체적 제안"],
+  "checklist": ["확인 필요 사항"]
+}
+
 ### For Simple Data Queries
 {
   "summary": "핵심 답변 (숫자 포함)",

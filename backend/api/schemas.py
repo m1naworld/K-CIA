@@ -78,6 +78,156 @@ class HexagonDetailResponse(BaseModel):
     risk: RiskCard
 
 
+# ---------- /api/map/hexagons/heatmap (Phase 2 S2) ----------
+
+class HeatmapHexagon(BaseModel):
+    h3_index: str
+    lat: float
+    lng: float
+    area_name: str | None = None
+    real_name: str | None = None
+    flow_total: float | None = None
+    values: dict = Field(default_factory=dict)
+
+
+class HeatmapResponse(BaseModel):
+    data: list[HeatmapHexagon]
+    data_asof: str
+    mode: str  # "hourly" or "weekday"
+
+
+# ---------- /api/map/hexagon/{h3_index}/peaktime (Phase 2 S2) ----------
+
+class PeaktimeAnalysis(BaseModel):
+    h3_index: str
+    qtr: str
+    flow_total: float | None = None
+    peak_hours: list[int] = []
+    off_peak_hours: list[int] = []
+    hourly_pattern: dict = Field(default_factory=dict)
+    weekday_pattern: dict = Field(default_factory=dict)
+    demo_breakdown: dict = Field(default_factory=dict)
+
+
+# ---------- /api/map/hexagons/risk (Phase 2 S5) ----------
+
+class RiskHexagon(BaseModel):
+    h3_index: str
+    lat: float
+    lng: float
+    area_name: str | None = None
+    real_name: str | None = None
+    risk_score: float = 0.0
+    risk_factors: list[str] = []
+    close_rate: float | None = None
+    sales_qoq: float | None = None
+    store_growth: float | None = None
+    flow_qoq: float | None = None
+    sales_amt: float | None = None
+
+
+class RiskLayerResponse(BaseModel):
+    data: list[RiskHexagon]
+    data_asof: str
+
+
+# ---------- /api/map/hexagon/{h3_index}/risk (Phase 2 S5) ----------
+
+class RiskAnalysis(BaseModel):
+    h3_index: str
+    area_name: str | None = None
+    real_name: str | None = None
+    risk_score: float = 0.0
+    risk_factors: list[str] = []
+    close_rate: float | None = None
+    sales_qoq: float | None = None
+    store_growth: float | None = None
+    flow_qoq: float | None = None
+    alternative_areas: list[dict] = []
+    data_asof: str = ""
+
+
+# ---------- /api/map/hexagon/{h3_index}/compare (Phase 3 S4) ----------
+
+class QuarterComparison(BaseModel):
+    metric: str
+    qtr1_value: float | None = None
+    qtr2_value: float | None = None
+    change_rate: float | None = None
+    avg_change_rate: float | None = None
+    above_avg: bool | None = None
+
+
+class CompareResponse(BaseModel):
+    h3_index: str
+    qtr1: str
+    qtr2: str
+    comparisons: list[QuarterComparison] = []
+    hourly_q1: dict | None = None
+    hourly_q2: dict | None = None
+    data_asof: str
+
+
+# ---------- /api/content (Phase 4 S6) ----------
+
+class StoryRequest(BaseModel):
+    analysis_run_id: int | None = None
+    goal: str = Field("입지추천", description="메시지 목표: 입지추천, 리스크경고, 운영최적화")
+    kpis: dict = Field(default_factory=dict)
+    area_name: str | None = None
+    qtr: str | None = None
+
+
+class StoryCut(BaseModel):
+    cut_number: int
+    title: str
+    body: str
+    kpi_ref: str | None = None
+    visual_hint: str | None = None
+
+
+class StoryResponse(BaseModel):
+    cuts: list[StoryCut] = []
+    citations: list[str] = []
+    data_asof: str = ""
+    warning: str = "본 자료는 공공데이터 기반 추정치이며, 실제 현장 확인이 필요합니다."
+
+
+# ---------- /api/portfolio (Phase 5 S7/S8) ----------
+
+class AssetInput(BaseModel):
+    address: str
+    category: str | None = None
+    lat: float | None = None
+    lng: float | None = None
+
+
+class AssetHealth(BaseModel):
+    asset_id: int
+    address: str
+    area_name: str | None = None
+    health_status: str = "yellow"  # green, yellow, red
+    health_score: float = 0.0
+    demand_z: float | None = None
+    competition_z: float | None = None
+    growth_z: float | None = None
+    risk_z: float | None = None
+    top_factors: list[str] = []
+    alternatives: list[dict] = []
+
+
+class PortfolioMatrix(BaseModel):
+    assets: list[AssetHealth] = []
+    rebalance_suggestions: list[str] = []
+
+
+class ABComparison(BaseModel):
+    asset_a: AssetHealth
+    asset_b: AssetHealth
+    recommendation: str = ""
+    sensitivity: dict = Field(default_factory=dict)
+
+
 # ---------- /api/chat ----------
 
 class ChatMessage(BaseModel):

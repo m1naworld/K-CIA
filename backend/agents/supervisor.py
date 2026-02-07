@@ -31,9 +31,13 @@ Classify the user's question into exactly ONE route:
               - Follow-up questions (references to previous context)
               Examples: "매출 알려줘", "카페 매출 Top3", "추이 분석해줘", "~는 어때?"
 
+- "content" : Content generation requests (4-cut stories, scripts, reports)
+              Keywords: 4컷, 쇼츠, 스토리, 스크립트, 콘텐츠, 만화, 설득용, 보고서로 만들어줘
+              Examples: "4컷으로 만들어줘", "설득용 스토리 생성", "쇼츠 스크립트 만들어줘"
+
 IMPORTANT: When in doubt, ALWAYS choose "both". It's safer to provide insight than miss it.
 
-Respond with ONLY a JSON object: {"route": "sql"|"insight"|"both"}
+Respond with ONLY a JSON object: {"route": "sql"|"insight"|"both"|"content"}
 """
 
 
@@ -49,7 +53,7 @@ def route_query(question: str) -> str:
         route = parsed.get("route", "both")
     except (json.JSONDecodeError, AttributeError):
         route = "both"
-    if route not in ("sql", "insight", "both"):
+    if route not in ("sql", "insight", "both", "content"):
         route = "both"
     return route
 

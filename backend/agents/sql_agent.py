@@ -112,6 +112,50 @@ Users may use colloquial terms. Map to actual service_name in dim_category:
 
 When querying categories, use the exact service_name from above or use LIKE pattern matching.
 
+## Time-based Analysis (시간대/요일/연령/성별 분석)
+
+fact_flow_area_qtr has JSONB columns for detailed breakdown:
+- flow_by_hour: {"0": 1234, "1": 567, ..., "23": 890} — 시간대별 유동인구
+- flow_by_weekday: {"월": 1234, "화": 567, ...} — 요일별 유동인구
+- flow_by_demo: {"male_10": N, "male_20": N, "female_20": N, ...} — 성별×연령대 유동인구
+
+To query hourly data:
+SELECT da.area_name,
+       (f.flow_by_hour->>'14')::int AS hour_14,
+       (f.flow_by_hour->>'15')::int AS hour_15
+FROM fact_flow_area_qtr f
+JOIN dim_area da ON f.area_id = da.area_id
+WHERE f.qtr = '20244' AND f.area_id IN (SELECT area_id FROM preset_area_scope)
+
+To find peak hours:
+SELECT da.area_name, key AS hour, value::int AS flow
+FROM fact_flow_area_qtr f
+JOIN dim_area da ON f.area_id = da.area_id,
+LATERAL jsonb_each_text(f.flow_by_hour) AS x(key, value)
+WHERE f.qtr = '20244' AND f.area_id IN (SELECT area_id FROM preset_area_scope)
+ORDER BY value::int DESC
+LIMIT 10
+
+To query demographic data:
+SELECT da.area_name,
+       (f.flow_by_demo->>'female_20')::int AS female_20s,
+       (f.flow_by_demo->>'female_30')::int AS female_30s
+FROM fact_flow_area_qtr f
+JOIN dim_area da ON f.area_id = da.area_id
+WHERE f.qtr = '20244' AND f.area_id IN (SELECT area_id FROM preset_area_scope)
+
+## Risk Analysis (리스크 분석)
+
+For risk/closure analysis, JOIN fact_store with fact_sales:
+SELECT da.area_name,
+       fst.store_cnt, fst.close_cnt, fst.open_cnt,
+       ROUND(fst.close_cnt::numeric / NULLIF(fst.store_cnt, 0) * 100, 1) AS close_rate_pct,
+       fs.sales_amt
+FROM fact_store_area_qtr fst
+JOIN dim_area da ON fst.area_id = da.area_id
+LEFT JOIN fact_sales_area_qtr fs ON fs.area_id = fst.area_id AND fs.qtr = fst.qtr
+WHERE fst.qtr = '20251' AND fst.area_id IN (SELECT area_id FROM preset_area_scope)
+
 ## Latest Available Quarters
 - Sales (fact_sales_area_qtr): 20251 (latest), 20244, 20243, 20242, 20241...
 - Flow (fact_flow_area_qtr): 20244 (latest), 20243, 20242, 20241

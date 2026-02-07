@@ -5,6 +5,8 @@ from api.map import router as map_router
 from api.data import router as data_router
 from api.chat import router as chat_router
 from api.events import router as events_router
+from api.content import router as content_router
+from api.portfolio import router as portfolio_router
 
 app = FastAPI(title="K-CIA Lite API", version="0.1.0")
 
@@ -21,6 +23,8 @@ app.include_router(map_router)
 app.include_router(data_router)
 app.include_router(chat_router)
 app.include_router(events_router)
+app.include_router(content_router)
+app.include_router(portfolio_router)
 
 
 @app.get("/health")

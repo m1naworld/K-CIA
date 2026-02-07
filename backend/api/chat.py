@@ -94,10 +94,17 @@ async def _stream_chat(request: ChatRequest) -> AsyncGenerator[str, None]:
                 row_count = 0
             yield _sse_event("sql", {"sql": sql_text, "row_count": row_count})
 
+        # content event (if content agent ran)
+        content_brief = result.get("content_brief")
+        if content_brief is not None:
+            yield _sse_event("content", content_brief)
+
         # insight event (if insight agent ran)
         insight = result.get("insight")
         if insight is not None:
             yield _sse_event("insight", insight)
+        elif content_brief is not None:
+            pass  # content route handled above
         elif sql_text is not None:
             sql_result = result.get("sql_result")
             if isinstance(sql_result, dict) and sql_result.get("rows"):
