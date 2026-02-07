@@ -400,3 +400,47 @@
 | **의존성** | M5-6 |
 | **리스크** | 낮음 |
 | **DoD** | 비교 쿼리 실행, 차이점 문서화 |
+
+---
+
+## M6: Phase 2~5 확장 (S2~S8 시나리오)
+
+### M6-1: S2 피크타임 운영전략 + S5 리스크 진단 [P0] ✅ DONE (2026-02-07)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 시간대별 운영전략 및 경쟁과밀/폐업 리스크 진단 |
+| **작업** | Backend: heatmap API, peaktime API, risk 레이어/상세 API. Frontend: PeaktimeCard, RiskAnalysisCard, 뷰모드 토글(기본/히트맵/리스크), HexMap 리스크·히트맵 레이어 |
+| **산출물** | `backend/api/map.py` (수정), `PeaktimeCard.tsx`, `RiskAnalysisCard.tsx`, `FilterPanel.tsx` (수정), `HexMap.tsx` (수정) |
+| **의존성** | M2-1, M3-1 |
+| **DoD** | 뷰모드 토글 동작, 피크타임 카드 표시, 리스크 분해 카드 표시 |
+
+### M6-2: S3 팝업 위치·기간 + S4 분기 비교 리포트 [P0] ✅ DONE (2026-02-07)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 분기간 비교 분석 및 D8 집객시설 데이터 확보 |
+| **작업** | Backend: compare API. Frontend: CompareChart, ComparePanel. ETL: load_d8_facilities.py |
+| **산출물** | `CompareChart.tsx`, `ComparePanel.tsx`, `etl/load_d8_facilities.py` |
+| **의존성** | M2-1 |
+| **DoD** | 분기 비교 차트 표시, D8 ETL 스크립트 실행 가능 |
+
+### M6-3: S6 콘텐츠 생성 (4컷/쇼츠) [P1] ✅ DONE (2026-02-07)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 상권 분석 결과를 4컷 스토리로 변환 |
+| **작업** | Backend: content_agent, POST /api/content/story. Frontend: StoryCutCard, StoryMode. LangGraph content 노드 추가 |
+| **산출물** | `backend/agents/content_agent.py`, `backend/api/content.py`, `StoryCutCard.tsx`, `StoryMode.tsx` |
+| **의존성** | M2-3 |
+| **DoD** | 스토리 생성 요청 → 4컷 카드 렌더링 |
+
+### M6-4: S7 다점포 리밸런싱 + S8 A/B 투자 검토 [P1] ✅ DONE (2026-02-07)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 다점포 포트폴리오 건강도 및 A/B 비교 |
+| **작업** | Backend: portfolio API (등록/health/compare). Frontend: PortfolioPanel, MatrixChart, ABCompare, portfolioStore. ETL: load_d14_realprice, load_d15_rent |
+| **산출물** | `backend/api/portfolio.py`, `PortfolioPanel.tsx`, `MatrixChart.tsx`, `ABCompare.tsx`, `portfolioStore.ts` |
+| **의존성** | M2-1 |
+| **DoD** | 점포 등록 → Health 카드 → A/B 비교 → 매트릭스 차트 |

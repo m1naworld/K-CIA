@@ -1269,3 +1269,91 @@ curl "http://localhost:8000/api/map/hexagons?area_type=COMMERCIAL_AREA&weight_ty
 ### 다음 단계
 
 - M5-7: 품질 검증 (면적 vs 점포 weight 비교 리포트)
+
+
+## 2026-02-07 — Phase 2~5 확장 구현 완료
+
+### 상태: PHASE 2-5 COMPLETE
+
+### 완료한 작업
+
+#### Phase 2: S2(피크타임 운영전략) + S5(리스크 진단)
+
+**Backend:**
+- [x] `GET /api/map/hexagons/heatmap` — 시간대/요일별 유동인구 히트맵
+- [x] `GET /api/map/hexagon/{h3_index}/peaktime` — 피크/오프피크 시간대 분석
+- [x] `GET /api/map/hexagons/risk` — 리스크 레이어 (risk_score 계산)
+- [x] `GET /api/map/hexagon/{h3_index}/risk` — 리스크 분해 + 대안 구역 제안
+- [x] SQL Agent에 시간대 JSONB 쿼리 패턴 추가
+- [x] Insight Agent에 운영전략/리스크 응답 템플릿 추가
+
+**Frontend:**
+- [x] `PeaktimeCard.tsx` — 피크타임 분석 카드 (시간대별 바 차트)
+- [x] `RiskAnalysisCard.tsx` — 리스크 분해 카드 (게이지 + 대안 구역)
+- [x] `FilterPanel.tsx` — 뷰 모드 토글 (기본/시간대히트맵/요일히트맵/리스크)
+- [x] `HexMap.tsx` — 리스크 레이어, 히트맵 레이어, 시간대 슬라이더
+- [x] `Sidebar.tsx` — PeaktimeCard, RiskAnalysisCard 통합
+
+#### Phase 3: S3(팝업 위치·기간) + S4(분기 비교 리포트)
+
+**Backend:**
+- [x] `GET /api/map/hexagon/{h3_index}/compare` — 분기 비교 API (QoQ + 평균 대비)
+- [x] `backend/migrations/004_phase2_extensions.sql` — fact_facilities_area DDL
+
+**Frontend:**
+- [x] `CompareChart.tsx` — 증감률 비교 수평 바 차트
+- [x] `ComparePanel.tsx` — 분기 선택 + 비교 결과 패널
+- [x] `Sidebar.tsx` — ComparePanel 통합
+
+**ETL:**
+- [x] `etl/load_d8_facilities.py` — D8 집객시설 ETL (SEOUL_API_KEY 사용)
+
+#### Phase 4: S6(콘텐츠 생성 — 4컷/쇼츠)
+
+**Backend:**
+- [x] `backend/agents/content_agent.py` — Content Agent (GPT-4o 기반)
+- [x] `backend/api/content.py` — POST /api/content/story 엔드포인트
+- [x] Supervisor에 "content" 라우팅 추가
+- [x] LangGraph에 content_agent 노드 추가
+
+**Frontend:**
+- [x] `StoryCutCard.tsx` — 개별 컷 카드 (HOOK/FACT/RISK/ACTION)
+- [x] `StoryMode.tsx` — 4컷 스토리 생성 패널 (목표 선택 + 생성)
+
+#### Phase 5: S7(다점포 리밸런싱) + S8(A/B 투자 검토)
+
+**Backend:**
+- [x] `backend/api/portfolio.py` — 점포 등록, Health 카드, A/B 비교 API
+- [x] `backend/migrations/005_portfolio.sql` — dim_asset, fact_real_price, fact_rent_vacancy DDL
+
+**Frontend:**
+- [x] `PortfolioPanel.tsx` — 점포 등록 + Health 카드 (Green/Yellow/Red)
+- [x] `MatrixChart.tsx` — 수요 vs 리스크 매트릭스 (ScatterChart)
+- [x] `ABCompare.tsx` — A/B 점포 비교
+- [x] `portfolioStore.ts` — 포트폴리오 상태 관리
+
+**ETL:**
+- [x] `etl/load_d14_realprice.py` — D14 실거래가 ETL (REALPRICE_API_KEY 필요)
+- [x] `etl/load_d15_rent.py` — D15 임대료/공실 ETL (CSV 다운로드)
+
+### 빌드 검증
+
+```
+TypeScript: tsc --noEmit → 0 errors ✓
+Next.js: next build → 성공 ✓
+Backend: 02ac844 + 6c619b8 커밋 완료 ✓
+```
+
+### 파일 변경 요약
+
+| 유형 | Backend | Frontend | ETL |
+|------|---------|----------|-----|
+| 신규 | 5 | 12 | 3 |
+| 수정 | 7 | 6 | 0 |
+| 총 코드 | ~1,500줄 | ~2,000줄 | ~500줄 |
+
+### 블로커
+
+- 없음
+
+---
