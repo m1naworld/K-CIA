@@ -13,7 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { trackEvent } from "@/lib/analytics";
+import type { ViewMode } from "@/types/map";
 
 // 최근 8분기 생성 (현재 2024Q4 기준 → 2023Q1~2024Q4)
 function generateQuarters(): { value: string; label: string }[] {
@@ -43,9 +45,11 @@ export default function FilterPanel() {
     category,
     quarter,
     categories,
+    viewMode,
     setAreaType,
     setCategory,
     setQuarter,
+    setViewMode,
     fetchCategories,
     fetchAreas,
   } = useMapStore();
@@ -87,6 +91,18 @@ export default function FilterPanel() {
       qtr: nextQuarter,
     });
   };
+
+  const handleViewModeChange = (mode: ViewMode) => {
+    setViewMode(mode);
+    trackEvent("VIEW_MODE_CHANGE", { mode });
+  };
+
+  const VIEW_MODES: { value: ViewMode; label: string }[] = [
+    { value: "default", label: "기본" },
+    { value: "heatmap_hourly", label: "시간대 히트맵" },
+    { value: "heatmap_weekday", label: "요일 히트맵" },
+    { value: "risk", label: "리스크" },
+  ];
 
   return (
     <Card className="h-full w-72 shrink-0 overflow-y-auto rounded-none border-0 border-r border-white/10 bg-gray-900 text-white">
@@ -154,6 +170,26 @@ export default function FilterPanel() {
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        <Separator className="bg-white/10" />
+
+        {/* 뷰 모드 */}
+        <div className="flex flex-col gap-2">
+          <Label className="text-xs text-white/60">뷰 모드</Label>
+          <div className="grid grid-cols-2 gap-1">
+            {VIEW_MODES.map((mode) => (
+              <Button
+                key={mode.value}
+                variant={viewMode === mode.value ? "default" : "outline"}
+                size="sm"
+                className="text-[10px]"
+                onClick={() => handleViewModeChange(mode.value)}
+              >
+                {mode.label}
+              </Button>
+            ))}
+          </div>
         </div>
       </CardContent>
     </Card>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useMapStore } from "@/store/mapStore";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,6 +13,9 @@ import {
   BarDistribution,
   WarningList,
 } from "./MetricCard";
+import PeaktimeCard from "./PeaktimeCard";
+import RiskAnalysisCard from "./RiskAnalysisCard";
+import ComparePanel from "./ComparePanel";
 
 // Icons as simple SVGs
 const FlowIcon = () => (
@@ -61,8 +65,22 @@ export default function Sidebar() {
     hexDetailLoading,
     selectedAreaName,
     selectedRealName,
+    selectedHex,
+    peaktime,
+    riskAnalysis,
+    compareData,
     closeSidebar,
+    fetchPeaktime,
+    fetchRiskAnalysis,
   } = useMapStore();
+
+  // Fetch peaktime and risk when hex detail loads
+  useEffect(() => {
+    if (hexDetail && selectedHex) {
+      fetchPeaktime(selectedHex);
+      fetchRiskAnalysis(selectedHex);
+    }
+  }, [hexDetail, selectedHex, fetchPeaktime, fetchRiskAnalysis]);
 
   if (!sidebarOpen) return null;
 
@@ -259,6 +277,19 @@ export default function Sidebar() {
                   </p>
                 )}
               </MetricCard>
+
+              <Separator className="bg-white/10" />
+
+              {/* Peaktime Card (Phase 2 S2) */}
+              {peaktime && <PeaktimeCard data={peaktime} />}
+
+              {/* Risk Analysis Card (Phase 2 S5) */}
+              {riskAnalysis && <RiskAnalysisCard data={riskAnalysis} />}
+
+              <Separator className="bg-white/10" />
+
+              {/* Compare Panel (Phase 3 S4) */}
+              <ComparePanel data={compareData} />
             </>
           ) : (
             <div className="flex h-40 items-center justify-center text-sm text-white/40">

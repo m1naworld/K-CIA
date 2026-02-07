@@ -5,7 +5,7 @@ import Map, { Source, Layer, MapMouseEvent } from "react-map-gl/mapbox";
 import DeckGL from "@deck.gl/react";
 import { H3HexagonLayer } from "@deck.gl/geo-layers";
 import { useMapStore } from "@/store/mapStore";
-import type { HexagonSummary, MapViewState } from "@/types/map";
+import type { HexagonSummary, RiskHexagon, HeatmapHexagon, MapViewState } from "@/types/map";
 import { trackEvent } from "@/lib/analytics";
 
 const INITIAL_VIEW_STATE: MapViewState = {
@@ -18,6 +18,32 @@ const INITIAL_VIEW_STATE: MapViewState = {
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 const MAP_STYLE = "mapbox://styles/mapbox/dark-v11";
+
+function getRiskColorScale(score: number): [number, number, number] {
+  // Green (low risk) → Yellow → Red (high risk)
+  const t = Math.min(score, 100) / 100;
+  if (t < 0.4) {
+    return [40, 180, 100];
+  } else if (t < 0.7) {
+    const s = (t - 0.4) / 0.3;
+    return [Math.round(40 + s * 215), Math.round(180 + s * 20 - s * 60), Math.round(100 - s * 80)];
+  }
+  return [230, 70, 40];
+}
+
+function getHeatmapColor(value: number, max: number): [number, number, number] {
+  const t = max > 0 ? value / max : 0;
+  // Blue (low) → Cyan → Yellow → Red (high)
+  if (t < 0.33) {
+    const s = t / 0.33;
+    return [Math.round(30 + s * 20), Math.round(80 + s * 150), Math.round(200 + s * 55)];
+  } else if (t < 0.66) {
+    const s = (t - 0.33) / 0.33;
+    return [Math.round(50 + s * 205), Math.round(230 - s * 30), Math.round(255 - s * 200)];
+  }
+  const s = (t - 0.66) / 0.34;
+  return [255, Math.round(200 - s * 160), Math.round(55 - s * 35)];
+}
 
 function getColorScale(
   value: number,
@@ -164,10 +190,13 @@ function buildCommercialLabels(geojson: GeoJSON.FeatureCollection | null): GeoJS
 export default function HexMap() {
   const {
     selectedAreaId, selectedAreaName, selectedRealName, elevationMetric, areaType, category, quarter,
+    viewMode, selectedHour,
     setSelectedHex, setSelectedArea, fetchHexDetail, closeSidebar,
     showAdminDong, showCommercialAreas, toggleAdminDong, toggleCommercialAreas,
   } = useMapStore();
   const [data, setData] = useState<HexagonSummary[]>([]);
+  const [riskData, setRiskData] = useState<RiskHexagon[]>([]);
+  const [heatmapData, setHeatmapData] = useState<HeatmapHexagon[]>([]);
   const [loading, setLoading] = useState(true);
   const [adminDongGeo, setAdminDongGeo] = useState<GeoJSON.FeatureCollection | null>(null);
   const [commercialGeo, setCommercialGeo] = useState<GeoJSON.FeatureCollection | null>(null);
@@ -216,6 +245,32 @@ export default function HexMap() {
       });
   }, [areaType, category, quarter]);
 
+  // Fetch risk layer data
+  useEffect(() => {
+    if (viewMode !== "risk") return;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+    const params = new URLSearchParams({ area_type: areaType });
+    if (category && category !== "all") params.set("category", category);
+    if (quarter && quarter !== "latest") params.set("qtr", quarter);
+    fetch(`${apiUrl}/api/map/hexagons/risk?${params}`)
+      .then((res) => res.json())
+      .then((json) => setRiskData(json.data || []))
+      .catch(() => setRiskData([]));
+  }, [viewMode, areaType, category, quarter]);
+
+  // Fetch heatmap data
+  useEffect(() => {
+    if (viewMode !== "heatmap_hourly" && viewMode !== "heatmap_weekday") return;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+    const mode = viewMode === "heatmap_hourly" ? "hourly" : "weekday";
+    const params = new URLSearchParams({ area_type: areaType, mode });
+    if (quarter && quarter !== "latest") params.set("qtr", quarter);
+    fetch(`${apiUrl}/api/map/hexagons/heatmap?${params}`)
+      .then((res) => res.json())
+      .then((json) => setHeatmapData(json.data || []))
+      .catch(() => setHeatmapData([]));
+  }, [viewMode, areaType, quarter]);
+
   const salesRange = useMemo(() => {
     if (data.length === 0) return { min: 0, max: 1 };
     const commercial = data.filter((d) => d.area_name !== null);
@@ -234,8 +289,92 @@ export default function HexMap() {
     return { min: Math.min(...values), max: Math.max(...values) };
   }, [data, elevationMetric]);
 
-  const layers = useMemo(
-    () => [
+  // Risk layer ranges
+  const riskRange = useMemo(() => {
+    if (riskData.length === 0) return { max: 100 };
+    return { max: Math.max(...riskData.map((d) => d.risk_score), 1) };
+  }, [riskData]);
+
+  // Heatmap value ranges
+  const heatmapMax = useMemo(() => {
+    if (heatmapData.length === 0) return 1;
+    const key = selectedHour !== null ? String(selectedHour) : null;
+    const values = heatmapData.map((d) => {
+      if (key && d.values[key] !== undefined) return d.values[key];
+      // Sum all values for total view
+      return Object.values(d.values).reduce((s, v) => s + v, 0);
+    });
+    return Math.max(...values, 1);
+  }, [heatmapData, selectedHour]);
+
+  const layers = useMemo(() => {
+    // Risk mode layer
+    if (viewMode === "risk" && riskData.length > 0) {
+      return [
+        new H3HexagonLayer({
+          id: "h3-risk",
+          data: riskData,
+          extruded: true,
+          pickable: true,
+          filled: true,
+          wireframe: true,
+          elevationScale: 1,
+          getHexagon: (d: RiskHexagon) => d.h3_index,
+          getFillColor: (d: RiskHexagon) => {
+            const [r, g, b] = getRiskColorScale(d.risk_score);
+            return [r, g, b, 200] as [number, number, number, number];
+          },
+          getLineColor: [0, 0, 0, 60] as [number, number, number, number],
+          getElevation: (d: RiskHexagon) => {
+            return 10 + (d.risk_score / riskRange.max) * 120;
+          },
+          updateTriggers: {
+            getFillColor: [riskRange],
+            getElevation: [riskRange],
+          },
+          transitions: { getElevation: 400, getFillColor: 400 },
+        }),
+      ];
+    }
+
+    // Heatmap mode layer
+    if ((viewMode === "heatmap_hourly" || viewMode === "heatmap_weekday") && heatmapData.length > 0) {
+      return [
+        new H3HexagonLayer({
+          id: "h3-heatmap",
+          data: heatmapData,
+          extruded: true,
+          pickable: true,
+          filled: true,
+          wireframe: false,
+          elevationScale: 1,
+          getHexagon: (d: HeatmapHexagon) => d.h3_index,
+          getFillColor: (d: HeatmapHexagon) => {
+            const key = selectedHour !== null ? String(selectedHour) : null;
+            const value = key && d.values[key] !== undefined
+              ? d.values[key]
+              : Object.values(d.values).reduce((s, v) => s + v, 0);
+            const [r, g, b] = getHeatmapColor(value, heatmapMax);
+            return [r, g, b, 200] as [number, number, number, number];
+          },
+          getElevation: (d: HeatmapHexagon) => {
+            const key = selectedHour !== null ? String(selectedHour) : null;
+            const value = key && d.values[key] !== undefined
+              ? d.values[key]
+              : Object.values(d.values).reduce((s, v) => s + v, 0);
+            return 5 + (value / heatmapMax) * 100;
+          },
+          updateTriggers: {
+            getFillColor: [selectedHour, heatmapMax],
+            getElevation: [selectedHour, heatmapMax],
+          },
+          transitions: { getElevation: 400, getFillColor: 400 },
+        }),
+      ];
+    }
+
+    // Default mode layer
+    return [
       new H3HexagonLayer({
         id: "h3-hexagons",
         data,
@@ -300,8 +439,9 @@ export default function HexMap() {
           getFillColor: 400,
         },
       }),
-    ],
-    [data, salesRange, elevationRange, elevationMetric, selectedAreaId, selectedAreaName]
+    ];
+  },
+    [data, riskData, heatmapData, viewMode, salesRange, elevationRange, elevationMetric, selectedAreaId, selectedAreaName, selectedHour, riskRange, heatmapMax]
   );
 
   const handleClick = useCallback(
@@ -624,6 +764,26 @@ export default function HexMap() {
         </div>
       </div>
 
+      {/* Hour Slider for heatmap mode */}
+      {viewMode === "heatmap_hourly" && (
+        <div className="absolute left-1/2 top-4 z-10 -translate-x-1/2 rounded-lg border border-white/10 bg-gray-900/80 px-4 py-2 text-xs text-white backdrop-blur-sm">
+          <div className="flex items-center gap-3">
+            <span className="text-white/60">시간대:</span>
+            <input
+              type="range"
+              min={0}
+              max={23}
+              value={selectedHour ?? 12}
+              onChange={(e) => useMapStore.getState().setSelectedHour(Number(e.target.value))}
+              className="w-40 accent-blue-500"
+            />
+            <span className="w-8 text-center font-medium">
+              {selectedHour ?? 12}시
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Selected area indicator */}
       {selectedAreaName && (
         <div className="absolute left-4 top-4 z-10 flex items-center gap-2 rounded-lg border border-white/10 bg-gray-900/80 px-4 py-2 text-sm text-white backdrop-blur-sm">
@@ -652,24 +812,60 @@ export default function HexMap() {
 
       {/* Legend */}
       <div className="absolute bottom-6 left-4 z-10 rounded-lg border border-white/10 bg-gray-900/80 px-4 py-3 backdrop-blur-sm">
-        <p className="mb-2 text-[10px] font-medium tracking-wide text-white/50">
-          매출 규모
-        </p>
-        <div
-          className="h-2.5 w-24 rounded-sm"
-          style={{
-            background:
-              "linear-gradient(to right, #32a050, #96dc28, #ffd600, #ff8c00, #e03020)",
-          }}
-        />
-        <div className="mt-1 flex justify-between text-[10px] text-white/40">
-          <span>낮음</span>
-          <span>높음</span>
-        </div>
-        <div className="mt-2 flex items-center gap-1.5 text-[10px] text-white/40">
-          <div className="h-2.5 w-4 rounded-sm bg-[#555]" />
-          <span>주거/기타</span>
-        </div>
+        {viewMode === "risk" ? (
+          <>
+            <p className="mb-2 text-[10px] font-medium tracking-wide text-white/50">
+              리스크 점수
+            </p>
+            <div
+              className="h-2.5 w-24 rounded-sm"
+              style={{
+                background: "linear-gradient(to right, #28b464, #f5a623, #e64628)",
+              }}
+            />
+            <div className="mt-1 flex justify-between text-[10px] text-white/40">
+              <span>양호</span>
+              <span>위험</span>
+            </div>
+          </>
+        ) : viewMode === "heatmap_hourly" || viewMode === "heatmap_weekday" ? (
+          <>
+            <p className="mb-2 text-[10px] font-medium tracking-wide text-white/50">
+              유동인구 밀도
+            </p>
+            <div
+              className="h-2.5 w-24 rounded-sm"
+              style={{
+                background: "linear-gradient(to right, #1e50e6, #32e6ff, #ffe632, #ff4040)",
+              }}
+            />
+            <div className="mt-1 flex justify-between text-[10px] text-white/40">
+              <span>적음</span>
+              <span>많음</span>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="mb-2 text-[10px] font-medium tracking-wide text-white/50">
+              매출 규모
+            </p>
+            <div
+              className="h-2.5 w-24 rounded-sm"
+              style={{
+                background:
+                  "linear-gradient(to right, #32a050, #96dc28, #ffd600, #ff8c00, #e03020)",
+              }}
+            />
+            <div className="mt-1 flex justify-between text-[10px] text-white/40">
+              <span>낮음</span>
+              <span>높음</span>
+            </div>
+            <div className="mt-2 flex items-center gap-1.5 text-[10px] text-white/40">
+              <div className="h-2.5 w-4 rounded-sm bg-[#555]" />
+              <span>주거/기타</span>
+            </div>
+          </>
+        )}
         {showCommercialAreas && (
           <div className="mt-3 border-t border-white/10 pt-2">
             <p className="mb-1.5 text-[10px] font-medium tracking-wide text-white/50">상권 유형</p>
