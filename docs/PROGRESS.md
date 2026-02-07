@@ -1174,7 +1174,7 @@ Q: "매출 숫자만 알려줘"
 | M2 API Layer | DONE | M2-1~M2-4 | 없음 |
 | M3 UI Layer | DONE | M3-1~M3-5 | 없음 |
 | M4 Eval/Logging | DONE | M4-1~M4-3 | 없음 |
-| M5 Store H3 Weight | CODE COMPLETE | M5-1~M5-6 | M5-7 (테스트 대기) |
+| M5 Store H3 Weight | DELETED | - | - |
 | M6 S3 Data+Backend | PLANNED | - | M6-1~M6-5 |
 | M7 S3 Frontend | PLANNED | - | M7-1~M7-5 |
 | M8 S4 비교 | PLANNED | - | M8-1~M8-3 |
@@ -1213,76 +1213,9 @@ Q: "매출 숫자만 알려줘"
 
 ---
 
-## 2026-02-04 — M5 점포 수 기반 H3 Weight 구현
+## 2026-02-07 — M5 삭제
 
-### 상태: M5 CODE COMPLETE (테스트 대기)
+### 상태: DELETED
 
-### 완료한 작업
-
-- [x] M5-1: DB 스키마 추가
-  - `backend/migrations/003_store_h3_weight.sql` 작성
-  - 3개 테이블: raw_semas_store, fact_store_h3_count, bridge_area_h3_weight_store
-- [x] M5-2: 소상공인 API Collector
-  - `etl/collectors/semas_api_collector.py` 구현
-  - 페이지네이션, 재시도, Rate limiting 포함
-- [x] M5-3: 점포 수집 ETL
-  - `etl/load_semas_stores.py` 구현
-  - 좌표 검증 (서울 범위), H3 변환 (res=10)
-- [x] M5-4: H3 점포 집계
-  - `etl/load_store_h3_count.py` 구현
-- [x] M5-5: 점포 기반 Weight 계산
-  - `etl/compute_store_weight.py` 구현
-  - 상권별 H3 weight = 점포 수 비율
-- [x] M5-6: API 수정
-  - `backend/api/map.py` — weight_type 파라미터 추가
-  - `backend/api/schemas.py` — weight_type 응답 필드 추가
-- [x] etl/config.py에 SEMAS_API 설정 추가
-- [x] .env.example에 SEMAS_API_KEY 추가
-
-### 산출물
-
-| 파일 | 작업 |
-|------|------|
-| `backend/migrations/003_store_h3_weight.sql` | **신규** - 3개 테이블 DDL |
-| `etl/collectors/semas_api_collector.py` | **신규** - 소상공인 API 수집기 |
-| `etl/load_semas_stores.py` | **신규** - 점포 수집 ETL |
-| `etl/load_store_h3_count.py` | **신규** - H3 점포 집계 |
-| `etl/compute_store_weight.py` | **신규** - Weight 계산 |
-| `etl/config.py` | **수정** - SEMAS_API_KEY 추가 |
-| `backend/api/map.py` | **수정** - weight_type 파라미터 |
-| `backend/api/schemas.py` | **수정** - weight_type 응답 필드 |
-| `.env.example` | **수정** - SEMAS_API_KEY 추가 |
-
-### 실행 순서
-
-```bash
-# 1. DB 마이그레이션
-psql -U kcia -d kcia -f backend/migrations/003_store_h3_weight.sql
-
-# 2. 점포 데이터 수집 (SEMAS_API_KEY 필요)
-docker compose run --rm --entrypoint python etl -m etl.load_semas_stores
-
-# 3. H3별 점포 수 집계
-docker compose run --rm --entrypoint python etl -m etl.load_store_h3_count
-
-# 4. 점포 기반 weight 계산
-docker compose run --rm --entrypoint python etl -m etl.compute_store_weight
-```
-
-### API 사용법
-
-```bash
-# 점포 기반 weight (기본값)
-curl "http://localhost:8000/api/map/hexagons?area_type=COMMERCIAL_AREA&weight_type=store"
-
-# 면적 기반 weight
-curl "http://localhost:8000/api/map/hexagons?area_type=COMMERCIAL_AREA&weight_type=area"
-```
-
-### 블로커
-
-- SEMAS_API_KEY 발급 필요 (공공데이터포털)
-
-### 다음 단계
-
-- M5-7: 품질 검증 (면적 vs 점포 weight 비교 리포트)
+- M5 (점포 수 기반 H3 Weight) 불필요로 판단하여 삭제
+- 관련 코드 및 마이그레이션 파일 제거됨

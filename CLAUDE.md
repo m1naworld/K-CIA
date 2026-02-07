@@ -331,7 +331,7 @@ docker-compose up -d
 | M2 API Layer | ✅ 완료 | Map/Data/Chat API + LangGraph 에이전트 |
 | M3 UI Layer | ✅ 완료 | 3D Hex맵 + 사이드바 + 챗봇 + 필터/토글 |
 | M4 Eval/Logging | ✅ 완료 | 골든 쿼리 + analysis_run + 이벤트 로그 |
-| M5 Store Weight | 코드완료 | 점포 수 기반 H3 Weight (SEMAS API 키 대기) |
+| M5 Store Weight | ~~삭제~~ | 불필요로 판단하여 삭제 |
 | M6 S3 Data+Backend | 계획됨 | D8 ETL + 인구통계 필터 API |
 | M7 S3 Frontend | 계획됨 | 팝업 모드 UI + 타겟 필터 + 시간대 추천 |
 | M8 S4 비교 | 계획됨 | 분기 비교 API + UI |
