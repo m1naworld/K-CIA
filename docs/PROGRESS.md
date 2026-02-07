@@ -1357,3 +1357,23 @@ Backend: 02ac844 + 6c619b8 커밋 완료 ✓
 - 없음
 
 ---
+
+## [2026-02-07] Phase 2-5 테스트 작성 및 실행
+
+### 완료 항목
+- [x] 테스트 인프라 구축 (conftest.py, test_helpers.py)
+- [x] 56개 테스트 작성 (7개 파일), 전체 PASS
+- [x] 커밋: `d68b7b4`
+
+### 테스트 결과
+
+| 파일 | 대상 | 수 | 결과 |
+|------|------|---|------|
+| test_map_helpers.py | 유틸 함수 | 13 | PASS |
+| test_schemas.py | Pydantic 스키마 | 18 | PASS |
+| test_map_heatmap.py | 히트맵/피크타임/리스크 | 9 | PASS |
+| test_map_compare.py | 분기 비교 | 3 | PASS |
+| test_content.py | 콘텐츠 생성 | 6 | PASS |
+| test_portfolio.py | 포트폴리오 | 7 | PASS |
+
+---

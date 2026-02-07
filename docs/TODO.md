@@ -444,3 +444,13 @@
 | **산출물** | `backend/api/portfolio.py`, `PortfolioPanel.tsx`, `MatrixChart.tsx`, `ABCompare.tsx`, `portfolioStore.ts` |
 | **의존성** | M2-1 |
 | **DoD** | 점포 등록 → Health 카드 → A/B 비교 → 매트릭스 차트 |
+
+### M6-5: Phase 2-5 테스트 스위트 [P1] ✅ DONE (2026-02-07)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | Phase 2-5 구현 코드의 테스트 커버리지 확보 |
+| **작업** | conftest.py (DB/모듈 mock), 7개 테스트 파일 작성, 56개 케이스 전부 PASS |
+| **산출물** | `tests/conftest.py`, `tests/test_helpers.py`, `tests/test_map_*.py`, `tests/test_content.py`, `tests/test_portfolio.py`, `tests/test_schemas.py` |
+| **의존성** | M6-1~M6-4 |
+| **DoD** | `pytest tests/ -v` → 56 passed, 0 failed |
