@@ -11,7 +11,7 @@
 - **한 줄 정의**: "성수동의 어제와 오늘을 3D 지도와 대화로 읽어주는 AI 컨설턴트"
 - **핵심**: 공공데이터(정량) 기반 인사이트. 유튜브/소셜은 옵션 모듈(OFF여도 모든 Q&A 성립)
 - **타겟**: 예비 창업자, 브랜드/마케팅 실무자, 상권 컨설턴트, 임대/투자자
-- **현재 단계**: Planning Complete → 시나리오 1(P1 입지 Top3 추천) 구현 진입
+- **현재 단계**: 시나리오 1 완료 → Phase 3 (S3 팝업 + S4 분기비교) + SNS 모듈 구현 진입
 
 ---
 
@@ -60,8 +60,9 @@
 | Gemini Nano Banana | 4컷 만화/쇼츠 콘텐츠 생성 (Phase 4) |
 
 ### Data Sources
-- 서울시 공공데이터(D1/D2/D3/D5/D9/D11)
-- YouTube Data API (옵션)
+- 서울시 공공데이터(D1/D2/D3/D5/D8/D9/D11)
+- YouTube Data API v3 (옵션, M9)
+- Naver Search API Blog/Cafe (옵션, M9)
 
 ---
 
@@ -137,6 +138,13 @@ K-CIA/
 - `fact_store_area_qtr(area_id, qtr, cat_id, store_cnt, open_cnt, close_cnt)`
 - `fact_realtime_congestion_area(area_id, ts, congestion_level, ppltn_min, ppltn_max)`
 
+### Phase 3 팩트 테이블
+- `fact_facility_area_qtr(area_id, qtr, facility_type, facility_cnt)` — D8 집객시설 (M6)
+
+### SNS 테이블 (M9)
+- `fact_social_trend_daily(trend_id, area_scope, source, collected_date, keyword, buzz_volume, sentiment_score, sentiment_pos, sentiment_neg, top_keywords, evidence_snippets)`
+- `social_module_config(config_key, config_value, updated_at)` — 모듈 ON/OFF 설정
+
 ### 브릿지/메타
 - `bridge_area_h3_weight(area_id, h3_index, weight)` — 폴리곤→H3(res=10) 매핑
 - `analysis_run(run_id, question, params_json, sql_text, result_json, assumptions_json, data_asof)`
@@ -155,7 +163,9 @@ K-CIA/
 | D9 | 행정동 경계(SHP) | Must | 행정동코드 |
 | D11 | 실시간 도시데이터 | Should | AREA_CD + PPLTN_TIME |
 | D4 | 상주인구(행정동) | Could | 행정동_코드 + 기준_년분기_코드 |
-| D8 | 집객시설(상권배후지) | Could | 상권배후지_코드 + 기준_년분기_코드 |
+| D8 | 집객시설(상권배후지) | Must | 상권배후지_코드 + 기준_년분기_코드 |
+| YT | YouTube Data API v3 | Should | 키워드 + 날짜 |
+| NV | Naver Search API (Blog/Cafe) | Should | 키워드 + 날짜 |
 
 ---
 
@@ -163,11 +173,14 @@ K-CIA/
 
 | 메서드 | 경로 | 용도 |
 |--------|------|------|
-| GET | `/api/map/hexagons?area_type=&category=&qtr=` | H3 그리드 + 집계값 |
-| GET | `/api/map/hexagon/{h3_index}` | 특정 Hex 상세 (6개 카드) |
+| GET | `/api/map/hexagons?area_type=&category=&qtr=&mode=&target_gender=&target_age=` | H3 그리드 + 집계값 (popup mode 지원) |
+| GET | `/api/map/hexagon/{h3_index}` | 특정 Hex 상세 (기본 6개 + 팝업 3개 카드) |
+| POST | `/api/map/compare` | 분기 비교 (S4) |
 | GET | `/api/data/categories` | 업종 목록 |
 | GET | `/api/data/area-scope` | 영역 프리셋 (행정동/상권) |
 | POST | `/api/chat` | 챗봇 질의 (SSE 스트리밍) |
+| GET | `/api/social/trends?days=&source=` | SNS 트렌드 데이터 (M9) |
+| GET | `/api/social/config` | SNS 모듈 활성화 상태 (M9) |
 
 ---
 
@@ -255,8 +268,12 @@ MAPBOX_TOKEN=         # Mapbox 액세스 토큰
 # App
 NEXT_PUBLIC_API_URL=  # FastAPI 백엔드 URL
 
+# SNS 모듈 (M9)
+YOUTUBE_API_KEY=      # YouTube Data API v3 (무료 10K units/day)
+NAVER_CLIENT_ID=      # Naver Search API (무료 25K calls/day)
+NAVER_CLIENT_SECRET=  # Naver Search API
+
 # 옵션
-YOUTUBE_API_KEY=      # 유튜브 모듈 사용 시
 GEMINI_API_KEY=       # 콘텐츠 생성(4컷/쇼츠) — Phase 4
 ```
 
@@ -309,11 +326,16 @@ docker-compose up -d
 
 | 마일스톤 | 상태 | 내용 |
 |---------|------|------|
-| M0 Repo/Infra | 미시작 | 모노레포 + docker-compose + Next.js/FastAPI 스켈레톤 |
-| M1 Data Layer | 미시작 | DDL + D1/D2/D3/D5/D9 적재 + H3 매핑 |
-| M2 API Layer | 미시작 | Map/Data/Chat API + LangGraph 에이전트 |
-| M3 UI Layer | 미시작 | 3D Hex맵 + 사이드바 + 챗봇 + 필터/토글 |
-| M4 Eval/Logging | 미시작 | 골든 쿼리 + analysis_run + 이벤트 로그 |
+| M0 Repo/Infra | ✅ 완료 | 모노레포 + docker-compose + Next.js/FastAPI 스켈레톤 |
+| M1 Data Layer | ✅ 완료 | DDL + D1/D2/D3/D5/D9 적재 + H3 매핑 |
+| M2 API Layer | ✅ 완료 | Map/Data/Chat API + LangGraph 에이전트 |
+| M3 UI Layer | ✅ 완료 | 3D Hex맵 + 사이드바 + 챗봇 + 필터/토글 |
+| M4 Eval/Logging | ✅ 완료 | 골든 쿼리 + analysis_run + 이벤트 로그 |
+| M5 Store Weight | 코드완료 | 점포 수 기반 H3 Weight (SEMAS API 키 대기) |
+| M6 S3 Data+Backend | 계획됨 | D8 ETL + 인구통계 필터 API |
+| M7 S3 Frontend | 계획됨 | 팝업 모드 UI + 타겟 필터 + 시간대 추천 |
+| M8 S4 비교 | 계획됨 | 분기 비교 API + UI |
+| M9 SNS Module | 계획됨 | YouTube + Naver 수집 + Social Agent + UI |
 
 상세: `docs/PLAN.md`, `docs/TODO.md`, `docs/PROGRESS.md`
 

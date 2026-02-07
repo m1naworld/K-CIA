@@ -8,7 +8,9 @@
 
 ## A. Scope & Strategy
 
-### MVP 정의: 시나리오 1 "입지 Top3 추천" 완결
+### MVP 정의: 시나리오 1 "입지 Top3 추천" 완결 ← **완료**
+
+> **현재 단계: Phase 3 (S3 팝업 + S4 분기비교) + SNS 모듈 진입**
 
 **Definition of Done (DoD):**
 
@@ -23,8 +25,8 @@
 
 ### Non-goals (이번 단계에서 하지 않을 것)
 
-- 시나리오 2~8 구현
-- 유튜브/소셜 모듈 (옵션 — Phase 2 이후)
+- 시나리오 2(S2 피크타임), 시나리오 5(S5 리스크 진단) — Phase 2로 이동, Phase 3 이후 진행
+- 시나리오 6~8 구현
 - PDF 보고서 생성/공유 기능
 - 사용자 인증/계정 시스템
 - D14(실거래가)/D15(임대통계)/D10(지하상가임대) 적재
@@ -148,6 +150,62 @@
 | **DoD** | 골든 쿼리 3종 회귀 테스트 통과, analysis_run에 저장된 결과 조회 가능, 이벤트 로그 1건 이상 기록 |
 | **리스크** | 낮음 — 기능 코드 위에 검증 레이어 추가 |
 
+### M6: S3 Data + Backend (D8 ETL + 인구통계 필터)
+
+| 항목 | 내용 |
+|------|------|
+| **입력** | M4 완료, D8 집객시설 API, fact_flow_area_qtr.flow_by_demo JSONB |
+| **작업 체크리스트** | |
+| | - [ ] `004_s3_facility.sql` — fact_facility_area_qtr 테이블 |
+| | - [ ] D8 ETL: Seoul API `VwsmTrdarHitterIndQq` → fact_facility_area_qtr |
+| | - [ ] Hexagons API: target_gender, target_age, mode 파라미터 추가 |
+| | - [ ] Hexagon Detail: FacilityCard, DemoCard, TimeSlotRecommendation 추가 |
+| | - [ ] SQL Agent: flow_by_demo JSONB 패턴, fact_facility_area_qtr 스키마 추가 |
+| **산출물** | Migration, ETL, 확장된 API |
+| **DoD** | popup mode API 호출 시 인구통계 필터 동작, 시설 카드 반환 |
+
+### M7: S3 Frontend (팝업 모드 UI)
+
+| 항목 | 내용 |
+|------|------|
+| **입력** | M6 완료 |
+| **작업 체크리스트** | |
+| | - [ ] Zustand: mode, targetGender, targetAge 상태 |
+| | - [ ] TypeScript: FacilityCard, DemoCard, TimeSlotRecommendation 인터페이스 |
+| | - [ ] PopupModePanel: 성별/연령대 필터 UI |
+| | - [ ] 사이드바: FacilityCard, DemoCard, TimeSlotCard 3개 추가 |
+| | - [ ] HexMap: popup 모드 시각화 (target_flow 기반 색상/높이) |
+| **산출물** | 팝업 모드 UI 컴포넌트 |
+| **DoD** | 팝업 모드 토글 → API 호출에 인구통계 파라미터 포함, 추가 카드 렌더링 |
+
+### M8: S4 분기 비교 (비교 API + UI)
+
+| 항목 | 내용 |
+|------|------|
+| **입력** | M6 완료 |
+| **작업 체크리스트** | |
+| | - [ ] POST /api/map/compare 엔드포인트 |
+| | - [ ] SQL Agent: 분기 비교 쿼리 패턴 |
+| | - [ ] Zustand: comparisonMode, compareQtrBefore/After 상태 |
+| | - [ ] ComparisonPanel, ComparisonCard, ComparisonChart 컴포넌트 |
+| **산출물** | 비교 API + UI |
+| **DoD** | 2개 분기 선택 → Before/After 비교 카드 + 차트 렌더링 |
+
+### M9: SNS Module (YouTube + Naver + Social Agent + UI)
+
+| 항목 | 내용 |
+|------|------|
+| **입력** | M6~M8 완료 |
+| **작업 체크리스트** | |
+| | - [ ] `005_sns_module.sql` — fact_social_trend_daily, social_module_config 테이블 |
+| | - [ ] YouTube Collector + Loader (youtube_collector.py, load_youtube_trends.py) |
+| | - [ ] Naver Collector + Loader (naver_collector.py, load_naver_trends.py) |
+| | - [ ] Social Agent (모듈 ON/OFF 분기) |
+| | - [ ] Social API (GET /api/social/trends, /api/social/config) |
+| | - [ ] Frontend: SocialToggle, SocialBuzzCard, KeywordCloudCard, EvidenceSnippetsCard |
+| **산출물** | SNS ETL, Social Agent, Social API, SNS UI |
+| **DoD** | SNS ON → 소셜 카드 표시, SNS OFF → 기존 기능 정상 동작 |
+
 ---
 
 ## C. Data Ingestion Plan for Scenario 1 (최소셋 우선)
@@ -162,8 +220,10 @@
 | **Must** | D3 상권영역(공간) | 상권 폴리곤 → H3 매핑, dim_area 적재 |
 | **Must** | D9 행정동 경계(SHP) | 행정동 폴리곤 → H3 매핑, dim_area 적재 |
 | **Should** | D11 실시간 도시데이터 | 후행성 보정 카드("지금 혼잡도"), 즉시성 UX |
+| **Must** | D8 집객시설(상권배후지) | S3 팝업 시나리오 시설 분석 (Phase 3에서 승격) |
 | **Could** | D4 상주인구(행정동) | 수요 보강(배후 인구), 시나리오 1에서는 비필수 |
-| **Could** | D8 집객시설(상권배후지) | 맥락 보강(학교/문화시설), 시나리오 3에서 주로 사용 |
+| **Should** | YouTube Data API v3 | SNS 트렌드 (버즈/감성), 비용 0 |
+| **Should** | Naver Search API (Blog/Cafe) | 로컬 SNS 트렌드, 비용 0 |
 
 ### 데이터셋별 상세
 
@@ -263,20 +323,24 @@
 ### 추천 확장 순서
 
 ```
-Phase 1: S1 (MVP) ← 현재
-Phase 2: S2 + S5 (시간대 + 리스크 — D5/D2 재사용, UI 확장만)
-Phase 3: S3 + S4 (타겟 필터 + 기간 비교 — D8 추가, 비교 UI)
-Phase 4: S6 (콘텐츠 생성 — Gemini Nano Banana 기반 4컷/쇼츠)
-Phase 5: S7 + S8 (포트폴리오 — D14/D15 추가, dim_asset, Q3 검증)
+Phase 1: S1 (MVP) ← 완료
+Phase 3: S3 + S4 (타겟 필터 + 기간 비교) ← 현재
+Phase 2: S2 + S5 (시간대 + 리스크) ← 다음
+Phase 4: S6 (콘텐츠 생성)
+Phase 5: S7 + S8 (포트폴리오)
 ```
 
-### 유튜브 옵션 모듈
+> Phase 2와 Phase 3 순서 변경: S3+S4가 사용자 우선순위 높고, D5 인구통계 데이터 이미 적재. (DEC-015)
+
+### SNS 모듈 (YouTube + Naver)
 
 | 항목 | 내용 |
 |------|------|
-| **붙이는 시점** | Phase 3 이후 (공공데이터 기반 시나리오 4개 이상 안정화 후) |
+| **붙이는 시점** | Phase 3와 동시 (M9), 공공데이터 기능 완성 후 |
+| **범위** | YouTube Data API v3 (무료 10K units/day) + Naver Search API Blog/Cafe (무료 25K calls/day) |
 | **OFF일 때 전략** | Supervisor가 Social Agent를 스킵, Insight Agent가 공공데이터 근거 + "추가 확인 체크리스트(현장/리뷰/검색)" 제공, as-of 배지에 "소셜 데이터 미포함" 명시 |
-| **ON 최소 요구** | `fact_youtube_trend_day_scope` 테이블, Social Agent, 감성 분석 파이프라인 |
+| **H3 매핑** | 불가 → `area_scope='seongsu'` 지역 스코프 수준 시작 (DEC-017) |
+| **ON 최소 요구** | `fact_social_trend_daily` 테이블, `social_module_config`, Social Agent |
 
 ---
 

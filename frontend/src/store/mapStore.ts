@@ -42,8 +42,8 @@ export const useMapStore = create<MapState>((set) => ({
   selectedAreaName: null,
   selectedRealName: null,
   areaType: "COMMERCIAL_AREA",
-  category: "",
-  quarter: "",
+  category: "all",
+  quarter: "latest",
   elevationMetric: "flow",
   categories: [],
   areas: [],
@@ -81,8 +81,7 @@ export const useMapStore = create<MapState>((set) => ({
   toggleAdminDong: () => set((s) => ({ showAdminDong: !s.showAdminDong })),
   toggleCommercialAreas: () => set((s) => ({ showCommercialAreas: !s.showCommercialAreas })),
   fetchCategories: async () => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-    if (!apiUrl) return;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
     try {
       const res = await fetch(`${apiUrl}/api/data/categories`);
       const json = await res.json();
@@ -92,8 +91,7 @@ export const useMapStore = create<MapState>((set) => ({
     }
   },
   fetchAreas: async () => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-    if (!apiUrl) return;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
     try {
       const res = await fetch(`${apiUrl}/api/data/area-scope`);
       const json = await res.json();

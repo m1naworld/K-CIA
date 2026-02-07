@@ -11,6 +11,7 @@ export interface HexagonSummary {
   store_cnt: number;
   open_cnt: number;
   close_cnt: number;
+  sales_qoq: number | null;
 }
 
 export interface HexagonsResponse {
@@ -78,6 +79,25 @@ export interface RiskCard {
   warnings: string[];
 }
 
+export interface RecommendationCard {
+  score: number;
+  grade: string;
+  pros: string[];
+  cons: string[];
+  summary: string;
+}
+
+export interface TrendPoint {
+  qtr: string;
+  value: number | null;
+}
+
+export interface TrendData {
+  sales: TrendPoint[];
+  flow: TrendPoint[];
+  store: TrendPoint[];
+}
+
 export interface HexagonDetailResponse {
   h3_index: string;
   lat: number;
@@ -90,4 +110,6 @@ export interface HexagonDetailResponse {
   competition: CompetitionCard;
   growth: GrowthCard;
   risk: RiskCard;
+  recommendation: RecommendationCard;
+  trend: TrendData;
 }

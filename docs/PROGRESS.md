@@ -1174,12 +1174,29 @@ Q: "매출 숫자만 알려줘"
 | M2 API Layer | DONE | M2-1~M2-4 | 없음 |
 | M3 UI Layer | DONE | M3-1~M3-5 | 없음 |
 | M4 Eval/Logging | DONE | M4-1~M4-3 | 없음 |
+| M5 Store H3 Weight | CODE COMPLETE | M5-1~M5-6 | M5-7 (테스트 대기) |
+| M6 S3 Data+Backend | PLANNED | - | M6-1~M6-5 |
+| M7 S3 Frontend | PLANNED | - | M7-1~M7-5 |
+| M8 S4 비교 | PLANNED | - | M8-1~M8-3 |
+| M9 SNS Module | PLANNED | - | M9-1~M9-6 |
 
 ## 다음 3개 액션
 
-1. **M0-5 DB 마이그레이션/CI**: Alembic 또는 Supabase migrations 선정
-2. **API 스모크 테스트**: /api/chat, /api/events 로컬 확인
-3. **운영 준비**: 문서 정리, 배포 설정
+1. **M6-1 DB Migration**: fact_facility_area_qtr 테이블 생성
+2. **M6-2 D8 ETL**: 집객시설 데이터 수집
+3. **M6-3 Hexagons API 인구통계 필터**: popup mode 파라미터
+
+---
+
+## 2026-02-07 — Phase 3 + SNS 계획 수립
+
+### 상태: PLANNING COMPLETE
+
+- Phase 2 건너뛰고 Phase 3 (S3 팝업 + S4 분기비교) 먼저 진행 (DEC-015)
+- SNS 모듈: YouTube + Naver Blog (비용 0) (DEC-016)
+- SNS 데이터 H3 매핑 불가 → 지역 스코프 (DEC-017)
+- M6~M9 마일스톤 정의
+- 문서 갱신: PLAN.md, TODO.md, DECISIONS.md, PROGRESS.md, CLAUDE.md
 
 ---
 

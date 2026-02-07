@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import {
   MetricCard,
+  MiniChart,
   StatRow,
   BarDistribution,
   WarningList,
@@ -41,6 +42,12 @@ const GrowthIcon = () => (
 const RiskIcon = () => (
   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+  </svg>
+);
+
+const RecommendIcon = () => (
+  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
   </svg>
 );
 
@@ -139,6 +146,14 @@ export default function Sidebar() {
                   unit="명"
                   highlight
                 />
+                {hexDetail.trend.flow.length > 0 && (
+                  <MiniChart
+                    data={hexDetail.trend.flow
+                      .filter((p) => p.value !== null)
+                      .map((p) => ({ label: p.qtr, value: p.value! }))}
+                    color="#60a5fa"
+                  />
+                )}
                 {hexDetail.flow.flow_by_weekday && (
                   <div className="mt-3">
                     <p className="mb-1 text-[10px] text-white/40">요일별 분포</p>
@@ -171,6 +186,17 @@ export default function Sidebar() {
                   value={hexDetail.sales.sales_cnt}
                   unit="건"
                 />
+                {hexDetail.trend.sales.length > 0 && (
+                  <MiniChart
+                    data={hexDetail.trend.sales
+                      .filter((p) => p.value !== null)
+                      .map((p) => ({
+                        label: p.qtr,
+                        value: Math.round(p.value! / 10000),
+                      }))}
+                    color="#fbbf24"
+                  />
+                )}
               </MetricCard>
 
               {/* Competition Card */}
@@ -257,6 +283,74 @@ export default function Sidebar() {
                   <p className="mt-2 text-xs text-emerald-400/80">
                     특별한 위험 신호 없음
                   </p>
+                )}
+              </MetricCard>
+
+              {/* Recommendation Card (6th) */}
+              <MetricCard
+                title="추천"
+                icon={<RecommendIcon />}
+                variant={
+                  hexDetail.recommendation.grade === "D"
+                    ? "danger"
+                    : hexDetail.recommendation.grade === "C"
+                      ? "warning"
+                      : "default"
+                }
+              >
+                <div className="flex items-center justify-between py-1">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${
+                        hexDetail.recommendation.grade === "S"
+                          ? "bg-emerald-500/20 text-emerald-400"
+                          : hexDetail.recommendation.grade === "A"
+                            ? "bg-blue-500/20 text-blue-400"
+                            : hexDetail.recommendation.grade === "B"
+                              ? "bg-amber-500/20 text-amber-400"
+                              : hexDetail.recommendation.grade === "C"
+                                ? "bg-orange-500/20 text-orange-400"
+                                : "bg-red-500/20 text-red-400"
+                      }`}
+                    >
+                      {hexDetail.recommendation.grade}
+                    </span>
+                    <span className="text-xs text-white/60">
+                      {hexDetail.recommendation.summary}
+                    </span>
+                  </div>
+                </div>
+                {hexDetail.recommendation.pros.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-[10px] text-white/40">긍정 요인</p>
+                    <ul className="mt-1 space-y-0.5">
+                      {hexDetail.recommendation.pros.map((p, i) => (
+                        <li
+                          key={i}
+                          className="flex items-start gap-1.5 text-xs text-emerald-400/90"
+                        >
+                          <span className="mt-0.5 shrink-0">+</span>
+                          <span>{p}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {hexDetail.recommendation.cons.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-[10px] text-white/40">부정 요인</p>
+                    <ul className="mt-1 space-y-0.5">
+                      {hexDetail.recommendation.cons.map((c, i) => (
+                        <li
+                          key={i}
+                          className="flex items-start gap-1.5 text-xs text-red-400/90"
+                        >
+                          <span className="mt-0.5 shrink-0">-</span>
+                          <span>{c}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
               </MetricCard>
             </>

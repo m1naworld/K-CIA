@@ -16,8 +16,11 @@ from api.schemas import (
     HexagonDetailResponse,
     HexagonSummary,
     HexagonsResponse,
+    RecommendationCard,
     RiskCard,
     SalesCard,
+    TrendData,
+    TrendPoint,
 )
 
 router = APIRouter(prefix="/api/map", tags=["map"])
@@ -79,27 +82,28 @@ def get_hexagons(
     sales_qtr = qtr or qtrs.get("sales", "")
     flow_qtr = qtr or qtrs.get("flow", "")
     store_qtr = qtr or qtrs.get("store", "")
+    prev_sales_qtr = _prev_quarter(sales_qtr) if sales_qtr else ""
 
     cat_filter_sales = ""
     cat_filter_store = ""
+    cat_filter_prev = ""
     params: dict = {
         "area_type": area_type,
         "sales_qtr": sales_qtr,
+        "prev_sales_qtr": prev_sales_qtr,
         "flow_qtr": flow_qtr,
         "store_qtr": store_qtr,
     }
     if category:
         cat_filter_sales = "AND s.cat_id = (SELECT cat_id FROM dim_category WHERE service_code = :cat)"
         cat_filter_store = "AND st.cat_id = (SELECT cat_id FROM dim_category WHERE service_code = :cat)"
+        cat_filter_prev = "AND cat_id = (SELECT cat_id FROM dim_category WHERE service_code = :cat)"
         params["cat"] = category
 
     # Select weight table based on weight_type parameter
-    # store: 점포 수 기반 weight (fallback to area if no store data)
-    # area: 면적 교차 비율 기반 weight
     if weight_type == "store":
         weight_cte = """
         weight_source AS (
-            -- 점포 기반 weight, 없으면 면적 기반 fallback
             SELECT
                 COALESCE(sw.area_id, aw.area_id) as area_id,
                 COALESCE(sw.h3_index, aw.h3_index) as h3_index,
@@ -117,9 +121,6 @@ def get_hexagons(
         ),
         """
 
-    # Filter by area_type and select primary area (highest weight) for each H3
-    # Each H3 belongs to exactly one "primary" commercial area
-    # Display that area's total sales/flow/store without weight distribution
     sql = text(f"""
         WITH {weight_cte}
         hex_areas AS (
@@ -140,6 +141,12 @@ def get_hexagons(
             WHERE qtr = :sales_qtr {cat_filter_sales.replace('s.', '')}
             GROUP BY area_id
         ),
+        prev_sales_agg AS (
+            SELECT area_id, SUM(sales_amt) as sales_amt
+            FROM fact_sales_area_qtr
+            WHERE qtr = :prev_sales_qtr {cat_filter_prev}
+            GROUP BY area_id
+        ),
         store_agg AS (
             SELECT area_id, SUM(store_cnt) as store_cnt, SUM(open_cnt) as open_cnt, SUM(close_cnt) as close_cnt
             FROM fact_store_area_qtr
@@ -156,9 +163,11 @@ def get_hexagons(
             COALESCE(f.flow_total, 0) AS flow_total,
             COALESCE(st.store_cnt, 0)::int AS store_cnt,
             COALESCE(st.open_cnt, 0)::int AS open_cnt,
-            COALESCE(st.close_cnt, 0)::int AS close_cnt
+            COALESCE(st.close_cnt, 0)::int AS close_cnt,
+            ps.sales_amt AS prev_sales_amt
         FROM primary_area pa
         LEFT JOIN sales_agg s ON s.area_id = pa.area_id
+        LEFT JOIN prev_sales_agg ps ON ps.area_id = pa.area_id
         LEFT JOIN fact_flow_area_qtr f ON f.area_id = pa.area_id AND f.qtr = :flow_qtr
         LEFT JOIN store_agg st ON st.area_id = pa.area_id
     """)
@@ -168,6 +177,9 @@ def get_hexagons(
     data = []
     for r in rows:
         lat, lng = h3.h3_to_geo(r.h3_index)
+        cur = float(r.sales_amt) if r.sales_amt else None
+        prev = float(r.prev_sales_amt) if r.prev_sales_amt else None
+        sales_qoq = _safe_div(cur, prev)
         data.append(
             HexagonSummary(
                 h3_index=r.h3_index,
@@ -182,6 +194,7 @@ def get_hexagons(
                 store_cnt=r.store_cnt or 0,
                 open_cnt=r.open_cnt or 0,
                 close_cnt=r.close_cnt or 0,
+                sales_qoq=sales_qoq,
             )
         )
 
@@ -196,6 +209,174 @@ def get_hexagons(
             "qtr_flow": flow_qtr,
             "qtr_store": store_qtr,
         },
+    )
+
+
+# ---------------------------------------------------------------------------
+# Recommendation & Trend helpers
+# ---------------------------------------------------------------------------
+
+def _build_recommendation(
+    *,
+    sales_growth: float | None,
+    flow_growth: float | None,
+    store_growth: float | None,
+    close_rate: float | None,
+    comp_density: float | None,
+    cur_flow: float | None,
+    cur_sales: float | None,
+) -> RecommendationCard:
+    """Compute suitability score (0-100) from metrics."""
+    score = 50  # baseline
+    pros: list[str] = []
+    cons: list[str] = []
+
+    # Sales growth (max ±20 pts)
+    if sales_growth is not None:
+        if sales_growth > 0.05:
+            score += 15
+            pros.append(f"매출 성장 중 (+{sales_growth * 100:.1f}%)")
+        elif sales_growth > 0:
+            score += 8
+            pros.append(f"매출 소폭 상승 (+{sales_growth * 100:.1f}%)")
+        elif sales_growth > -0.05:
+            score -= 5
+        else:
+            score -= 15
+            cons.append(f"매출 감소 추세 ({sales_growth * 100:.1f}%)")
+
+    # Flow growth (max ±15 pts)
+    if flow_growth is not None:
+        if flow_growth > 0.05:
+            score += 12
+            pros.append(f"유동인구 증가 (+{flow_growth * 100:.1f}%)")
+        elif flow_growth > 0:
+            score += 5
+        elif flow_growth > -0.05:
+            score -= 3
+        else:
+            score -= 12
+            cons.append(f"유동인구 감소 ({flow_growth * 100:.1f}%)")
+
+    # Close rate (max ±15 pts)
+    if close_rate is not None:
+        if close_rate < 0.05:
+            score += 10
+            pros.append("낮은 폐업률 (안정적 상권)")
+        elif close_rate < 0.10:
+            score += 3
+        elif close_rate < 0.15:
+            score -= 5
+        else:
+            score -= 15
+            cons.append(f"높은 폐업률 ({close_rate * 100:.1f}%)")
+
+    # Competition density
+    if comp_density is not None:
+        if comp_density > 50:
+            cons.append(f"경쟁 밀집 지역 (점포 {comp_density:.0f}개)")
+            score -= 8
+        elif comp_density < 10:
+            pros.append("경쟁 여유 공간")
+            score += 5
+
+    # Flow volume bonus
+    if cur_flow and cur_flow > 500000:
+        score += 5
+        if f"유동인구 증가" not in " ".join(pros):
+            pros.append("높은 유동인구 기반")
+
+    score = max(0, min(100, score))
+
+    if score >= 80:
+        grade = "S"
+    elif score >= 65:
+        grade = "A"
+    elif score >= 50:
+        grade = "B"
+    elif score >= 35:
+        grade = "C"
+    else:
+        grade = "D"
+
+    grade_labels = {"S": "적극 추천", "A": "추천", "B": "보통", "C": "주의", "D": "비추천"}
+    summary = f"{grade_labels[grade]} (점수 {score}/100)"
+
+    return RecommendationCard(
+        score=score,
+        grade=grade,
+        pros=pros[:4],
+        cons=cons[:4],
+        summary=summary,
+    )
+
+
+def _build_trend(
+    db: Session,
+    area_ids: list[int],
+    weights: dict[int, float],
+    current_qtr: str,
+    category: str | None,
+) -> TrendData:
+    """Fetch last 4 quarters of data for trend mini charts."""
+    # Generate last 4 quarter strings
+    qtrs = []
+    q = current_qtr
+    for _ in range(4):
+        qtrs.append(q)
+        q = _prev_quarter(q)
+    qtrs.reverse()  # oldest first
+
+    cat_filter = ""
+    params: dict = {"aids": tuple(area_ids), "qtrs": tuple(qtrs)}
+    if category:
+        cat_filter = "AND cat_id = (SELECT cat_id FROM dim_category WHERE service_code = :cat)"
+        params["cat"] = category
+
+    # Sales trend
+    sales_rows = db.execute(
+        text(f"""
+            SELECT qtr, SUM(sales_amt) as sales_amt
+            FROM fact_sales_area_qtr
+            WHERE area_id IN :aids AND qtr IN :qtrs {cat_filter}
+            GROUP BY qtr ORDER BY qtr
+        """),
+        params,
+    ).fetchall()
+    sales_map = {r.qtr: float(r.sales_amt) for r in sales_rows}
+
+    # Flow trend
+    flow_rows = db.execute(
+        text("""
+            SELECT qtr, SUM(flow_total) as flow_total
+            FROM fact_flow_area_qtr
+            WHERE area_id IN :aids AND qtr IN :qtrs
+            GROUP BY qtr ORDER BY qtr
+        """),
+        {"aids": tuple(area_ids), "qtrs": tuple(qtrs)},
+    ).fetchall()
+    flow_map = {r.qtr: float(r.flow_total) for r in flow_rows}
+
+    # Store trend
+    store_rows = db.execute(
+        text(f"""
+            SELECT qtr, SUM(store_cnt) as store_cnt
+            FROM fact_store_area_qtr
+            WHERE area_id IN :aids AND qtr IN :qtrs {cat_filter}
+            GROUP BY qtr ORDER BY qtr
+        """),
+        params,
+    ).fetchall()
+    store_map = {r.qtr: float(r.store_cnt) for r in store_rows}
+
+    def _fmt_qtr(q: str) -> str:
+        """'20241' → '24Q1'"""
+        return f"{q[2:4]}Q{q[-1]}"
+
+    return TrendData(
+        sales=[TrendPoint(qtr=_fmt_qtr(q), value=sales_map.get(q)) for q in qtrs],
+        flow=[TrendPoint(qtr=_fmt_qtr(q), value=flow_map.get(q)) for q in qtrs],
+        store=[TrendPoint(qtr=_fmt_qtr(q), value=store_map.get(q)) for q in qtrs],
     )
 
 
@@ -339,6 +520,20 @@ def get_hexagon_detail(
 
     lat, lng = h3.h3_to_geo(h3_index)
 
+    # --- Recommendation Card ---
+    rec = _build_recommendation(
+        sales_growth=sales_growth,
+        flow_growth=flow_growth,
+        store_growth=_safe_div(cur_store, prev_store),
+        close_rate=close_rate,
+        comp_density=comp_density,
+        cur_flow=cur_flow,
+        cur_sales=cur_sales,
+    )
+
+    # --- Trend Data (last 4 quarters) ---
+    trend = _build_trend(db, area_ids, weights, sales_qtr, category)
+
     return HexagonDetailResponse(
         h3_index=h3_index,
         lat=lat,
@@ -373,4 +568,6 @@ def get_hexagon_detail(
             competition_density=comp_density,
             warnings=warnings,
         ),
+        recommendation=rec,
+        trend=trend,
     )

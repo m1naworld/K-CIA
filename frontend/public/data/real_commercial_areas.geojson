@@ -1,0 +1,195 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "yeonmujang",
+        "name": "연무장길",
+        "type": "카페거리",
+        "description": "성수동 대표 카페거리, 힙한 카페와 편집샵 밀집"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [127.0580, 37.5420],
+          [127.0640, 37.5420],
+          [127.0645, 37.5450],
+          [127.0585, 37.5450],
+          [127.0580, 37.5420]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "sujehwa",
+        "name": "수제화거리",
+        "type": "전통상권",
+        "description": "성수동 전통 수제화 제조 상권"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [127.0545, 37.5395],
+          [127.0600, 37.5395],
+          [127.0600, 37.5425],
+          [127.0545, 37.5425],
+          [127.0545, 37.5395]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "seongsu_station",
+        "name": "성수역 상권",
+        "type": "역세권",
+        "description": "성수역 주변 상업지역"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [127.0540, 37.5435],
+          [127.0580, 37.5435],
+          [127.0580, 37.5465],
+          [127.0540, 37.5465],
+          [127.0540, 37.5435]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "daelim_popup",
+        "name": "대림창고/팝업",
+        "type": "팝업스토어",
+        "description": "대림창고, 어반소스 등 팝업스토어 밀집"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [127.0500, 37.5420],
+          [127.0545, 37.5420],
+          [127.0545, 37.5450],
+          [127.0500, 37.5450],
+          [127.0500, 37.5420]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "ttukseom_station",
+        "name": "뚝섬역 상권",
+        "type": "역세권",
+        "description": "뚝섬역 주변 카페 및 음식점"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [127.0455, 37.5460],
+          [127.0500, 37.5460],
+          [127.0500, 37.5490],
+          [127.0455, 37.5490],
+          [127.0455, 37.5460]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "seoul_forest_cafe",
+        "name": "서울숲 카페거리",
+        "type": "카페거리",
+        "description": "서울숲 인근 카페 밀집 지역"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [127.0390, 37.5445],
+          [127.0450, 37.5445],
+          [127.0450, 37.5480],
+          [127.0390, 37.5480],
+          [127.0390, 37.5445]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "heyground",
+        "name": "헤이그라운드",
+        "type": "코워킹",
+        "description": "헤이그라운드, 카우앤독 등 코워킹/F&B"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [127.0490, 37.5445],
+          [127.0530, 37.5445],
+          [127.0530, 37.5475],
+          [127.0490, 37.5475],
+          [127.0490, 37.5445]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "ttukdo_market",
+        "name": "뚝도시장",
+        "type": "전통시장",
+        "description": "뚝도시장 재래시장"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [127.0435, 37.5395],
+          [127.0480, 37.5395],
+          [127.0480, 37.5425],
+          [127.0435, 37.5425],
+          [127.0435, 37.5395]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "galleria_foret",
+        "name": "갤러리아포레",
+        "type": "주거복합",
+        "description": "갤러리아포레 상업시설"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [127.0400, 37.5460],
+          [127.0435, 37.5460],
+          [127.0435, 37.5485],
+          [127.0400, 37.5485],
+          [127.0400, 37.5460]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "seongsu_it",
+        "name": "성수IT밸리",
+        "type": "오피스",
+        "description": "IT기업, 스타트업 밀집 오피스 지역"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [127.0550, 37.5455],
+          [127.0600, 37.5455],
+          [127.0600, 37.5490],
+          [127.0550, 37.5490],
+          [127.0550, 37.5455]
+        ]]
+      }
+    }
+  ]
+}

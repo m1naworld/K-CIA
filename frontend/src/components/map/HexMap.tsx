@@ -19,35 +19,52 @@ const INITIAL_VIEW_STATE: MapViewState = {
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 const MAP_STYLE = "mapbox://styles/mapbox/dark-v11";
 
-function getColorScale(
-  value: number,
-  min: number,
-  max: number
-): [number, number, number] {
-  const t = max === min ? 0.5 : (value - min) / (max - min);
-  let r: number, g: number, b: number;
-  if (t < 0.25) {
-    const s = t / 0.25;
-    r = Math.round(40 + s * 120);
-    g = Math.round(160 + s * 60);
-    b = Math.round(40 - s * 20);
+/**
+ * Color scale for QoQ sales growth rate.
+ * Negative (decline) → red, zero → gray/yellow, positive (growth) → green.
+ * @param qoq - QoQ growth ratio (e.g., -0.1 = -10%, 0.05 = +5%)
+ */
+function getQoQColorScale(qoq: number | null): [number, number, number] {
+  if (qoq === null) return [180, 180, 80]; // neutral yellow-gray for no data
+
+  // Clamp to [-0.3, 0.3] range for normalization
+  const clamped = Math.max(-0.3, Math.min(0.3, qoq));
+  // Map to 0~1: -0.3 → 0, 0 → 0.5, +0.3 → 1
+  const t = (clamped + 0.3) / 0.6;
+
+  if (t < 0.35) {
+    // Red zone (strong decline)
+    const s = t / 0.35;
+    return [
+      Math.round(200 + s * 55),
+      Math.round(50 + s * 50),
+      Math.round(30 + s * 10),
+    ];
   } else if (t < 0.5) {
-    const s = (t - 0.25) / 0.25;
-    r = Math.round(160 + s * 95);
-    g = Math.round(220 - s * 10);
-    b = Math.round(20);
-  } else if (t < 0.75) {
-    const s = (t - 0.5) / 0.25;
-    r = 255;
-    g = Math.round(210 - s * 100);
-    b = 20;
+    // Orange zone (mild decline)
+    const s = (t - 0.35) / 0.15;
+    return [
+      255,
+      Math.round(100 + s * 80),
+      Math.round(40 + s * 20),
+    ];
+  } else if (t < 0.65) {
+    // Yellow zone (neutral / slight growth)
+    const s = (t - 0.5) / 0.15;
+    return [
+      Math.round(255 - s * 80),
+      Math.round(180 + s * 30),
+      Math.round(60 - s * 20),
+    ];
   } else {
-    const s = (t - 0.75) / 0.25;
-    r = Math.round(255 - s * 25);
-    g = Math.round(110 - s * 80);
-    b = Math.round(20 + s * 20);
+    // Green zone (growth)
+    const s = (t - 0.65) / 0.35;
+    return [
+      Math.round(175 - s * 135),
+      Math.round(210 - s * 40),
+      Math.round(40 + s * 40),
+    ];
   }
-  return [r, g, b];
 }
 
 // 행정동별 색상
@@ -216,14 +233,6 @@ export default function HexMap() {
       });
   }, [areaType, category, quarter]);
 
-  const salesRange = useMemo(() => {
-    if (data.length === 0) return { min: 0, max: 1 };
-    const commercial = data.filter((d) => d.area_name !== null);
-    if (commercial.length === 0) return { min: 0, max: 1 };
-    const values = commercial.map((d) => d.sales_amt);
-    return { min: Math.min(...values), max: Math.max(...values) };
-  }, [data]);
-
   const elevationRange = useMemo(() => {
     if (data.length === 0) return { min: 0, max: 1 };
     const commercial = data.filter((d) => d.area_name !== null);
@@ -253,11 +262,7 @@ export default function HexMap() {
               ? [100, 100, 100, 200] as [number, number, number, number]
               : [85, 85, 85, 160] as [number, number, number, number];
           }
-          const [r, g, b] = getColorScale(
-            d.sales_amt,
-            salesRange.min,
-            salesRange.max
-          );
+          const [r, g, b] = getQoQColorScale(d.sales_qoq);
           // Highlight selected area
           if (selectedAreaId !== null && d.area_id === selectedAreaId) {
             return [
@@ -291,7 +296,7 @@ export default function HexMap() {
           return 10 + normalized * 150;
         },
         updateTriggers: {
-          getFillColor: [salesRange, selectedAreaId],
+          getFillColor: [data, selectedAreaId],
           getLineColor: [selectedAreaId],
           getElevation: [elevationMetric, elevationRange],
         },
@@ -301,7 +306,7 @@ export default function HexMap() {
         },
       }),
     ],
-    [data, salesRange, elevationRange, elevationMetric, selectedAreaId, selectedAreaName]
+    [data, elevationRange, elevationMetric, selectedAreaId, selectedAreaName]
   );
 
   const handleClick = useCallback(
@@ -653,18 +658,18 @@ export default function HexMap() {
       {/* Legend */}
       <div className="absolute bottom-6 left-4 z-10 rounded-lg border border-white/10 bg-gray-900/80 px-4 py-3 backdrop-blur-sm">
         <p className="mb-2 text-[10px] font-medium tracking-wide text-white/50">
-          매출 규모
+          매출증감 (QoQ)
         </p>
         <div
           className="h-2.5 w-24 rounded-sm"
           style={{
             background:
-              "linear-gradient(to right, #32a050, #96dc28, #ffd600, #ff8c00, #e03020)",
+              "linear-gradient(to right, #e03020, #ff8c00, #ffd600, #90d040, #28a050)",
           }}
         />
         <div className="mt-1 flex justify-between text-[10px] text-white/40">
-          <span>낮음</span>
-          <span>높음</span>
+          <span>감소</span>
+          <span>증가</span>
         </div>
         <div className="mt-2 flex items-center gap-1.5 text-[10px] text-white/40">
           <div className="h-2.5 w-4 rounded-sm bg-[#555]" />

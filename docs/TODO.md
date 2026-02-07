@@ -400,3 +400,228 @@
 | **의존성** | M5-6 |
 | **리스크** | 낮음 |
 | **DoD** | 비교 쿼리 실행, 차이점 문서화 |
+
+---
+
+## M6: S3 Data + Backend (D8 ETL + 인구통계 필터)
+
+### M6-1: DB Migration (fact_facility_area_qtr) [P0]
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | D8 집객시설 데이터 저장 테이블 생성 |
+| **작업** | `backend/migrations/004_s3_facility.sql` 작성 (fact_facility_area_qtr) |
+| **산출물** | Migration SQL |
+| **의존성** | M1-1 |
+| **리스크** | 낮음 |
+| **DoD** | 테이블 생성 확인 |
+
+### M6-2: D8 ETL (집객시설) [P0]
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 집객시설 데이터 수집 및 적재 |
+| **작업** | `etl/load_facility_api.py` — Seoul API `VwsmTrdarHitterIndQq` → fact_facility_area_qtr. seoul_api_collector에 D8_FACILITY 서비스 추가 |
+| **산출물** | ETL 스크립트, 적재 데이터 |
+| **의존성** | M6-1 |
+| **리스크** | API 컬럼 매핑 확인 필요 |
+| **DoD** | fact_facility_area_qtr 적재, 시설 유형별 건수 조회 |
+
+### M6-3: Hexagons API 인구통계 필터 [P0]
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 팝업 모드에서 타겟 인구 기반 필터링 |
+| **작업** | `backend/api/map.py` — target_gender, target_age, mode 파라미터 추가. popup mode SQL (flow_by_demo JSONB 추출) |
+| **산출물** | 확장된 hexagons API |
+| **의존성** | M2-1 |
+| **리스크** | JSONB 쿼리 성능 |
+| **DoD** | popup mode API 호출 시 target_flow, target_flow_ratio 반환 |
+
+### M6-4: Hexagon Detail 확장 (시설 + 인구통계 카드) [P0]
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | Hex 상세에 시설/인구통계/시간대 추천 카드 추가 |
+| **작업** | `backend/api/schemas.py` — FacilityCard, DemoCard, TimeSlotRecommendation. `backend/api/map.py` — hexagon detail에 추가 필드 |
+| **산출물** | 확장된 hexagon detail API |
+| **의존성** | M6-1, M6-2, M6-3 |
+| **리스크** | 낮음 |
+| **DoD** | hexagon detail 응답에 facility, demo, time_slot 필드 포함 |
+
+### M6-5: SQL Agent 프롬프트 업데이트 [P0]
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | SQL Agent가 인구통계/시설 질의 처리 가능 |
+| **작업** | `backend/agents/sql_agent.py` — flow_by_demo JSONB 패턴, fact_facility_area_qtr 스키마, ALLOWED_TABLES 추가 |
+| **산출물** | 업데이트된 SQL Agent |
+| **의존성** | M6-1 |
+| **리스크** | 낮음 |
+| **DoD** | "20대 여성 유동인구 Top3" 질의에 JSONB 추출 SQL 생성 |
+
+---
+
+## M7: S3 Frontend (팝업 모드 UI)
+
+### M7-1: Zustand Store 확장 [P0]
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 팝업 모드 상태 관리 |
+| **작업** | `frontend/src/store/mapStore.ts` — mode, targetGender, targetAge, setMode, setTargetGender, setTargetAge |
+| **산출물** | 확장된 Zustand store |
+| **의존성** | M3-2 |
+| **리스크** | 낮음 |
+| **DoD** | 팝업 모드 상태 전환 동작 |
+
+### M7-2: TypeScript 타입 추가 [P0]
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 새 인터페이스 타입 안전성 |
+| **작업** | `frontend/src/types/map.ts` — FacilityCard, DemoCard, TimeSlotRecommendation, HexagonSummary/DetailResponse 확장 |
+| **산출물** | TypeScript 타입 |
+| **의존성** | 없음 |
+| **리스크** | 낮음 |
+| **DoD** | npm run build 타입 에러 없음 |
+
+### M7-3: 팝업 모드 필터 UI [P0]
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 팝업 모드 전환 + 타겟 필터 선택 |
+| **작업** | `frontend/src/components/filters/PopupModePanel.tsx` — Default/Popup 토글, 성별 선택, 연령대 선택. FilterPanel.tsx에 통합 |
+| **산출물** | PopupModePanel 컴포넌트 |
+| **의존성** | M7-1 |
+| **리스크** | 낮음 |
+| **DoD** | 팝업 모드 토글 동작, 필터 파라미터 API 전달 |
+
+### M7-4: 사이드바 카드 추가 (3개) [P0]
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 팝업 모드 상세 정보 |
+| **작업** | FacilityCard.tsx, DemoCard.tsx, TimeSlotCard.tsx. Sidebar.tsx에 popup 모드 조건부 렌더링 |
+| **산출물** | 사이드바 카드 3개 |
+| **의존성** | M6-4, M7-1 |
+| **리스크** | 낮음 |
+| **DoD** | popup 모드 사이드바에 3개 카드 표시 |
+
+### M7-5: HexMap 팝업 모드 시각화 [P0]
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 팝업 모드 시각 구분 |
+| **작업** | `frontend/src/components/map/HexMap.tsx` — popup mode: elevation=target_flow, color=target_flow_ratio (파랑→보라) |
+| **산출물** | 확장된 HexMap |
+| **의존성** | M7-1, M6-3 |
+| **리스크** | 낮음 |
+| **DoD** | popup 모드에서 색상/높이 변경 확인 |
+
+---
+
+## M8: S4 분기 비교
+
+### M8-1: 비교 API [P0]
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 2개 분기 지표 비교 |
+| **작업** | `backend/api/map.py` — POST /api/map/compare. `backend/api/schemas.py` — ComparisonRequest, ComparisonMetrics, ComparisonResponse |
+| **산출물** | 비교 API 엔드포인트 |
+| **의존성** | M2-1 |
+| **리스크** | 낮음 |
+| **DoD** | 2개 분기 비교 API 호출 시 changes 반환 |
+
+### M8-2: SQL Agent 비교 쿼리 패턴 [P0]
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 분기 비교 자연어 질의 처리 |
+| **작업** | `backend/agents/sql_agent.py` — 분기 비교 SQL 패턴 (WITH before AS, after AS) |
+| **산출물** | 업데이트된 SQL Agent |
+| **의존성** | M6-5 |
+| **리스크** | 낮음 |
+| **DoD** | "2024Q3 대비 Q4 매출 변화" 질의에 비교 SQL 생성 |
+
+### M8-3: Frontend 비교 모드 [P0]
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 비교 모드 UI |
+| **작업** | Zustand: comparisonMode, compareQtrBefore/After. ComparisonPanel.tsx, ComparisonCard.tsx, ComparisonChart.tsx. Sidebar.tsx 조건부 렌더링 |
+| **산출물** | 비교 UI 컴포넌트 |
+| **의존성** | M8-1 |
+| **리스크** | 낮음 |
+| **DoD** | 비교 모드에서 Before/After 카드 + 차트 렌더링 |
+
+---
+
+## M9: SNS Module (YouTube + Naver)
+
+### M9-1: DB Migration (SNS 테이블) [P0]
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | SNS 데이터 저장 구조 |
+| **작업** | `backend/migrations/005_sns_module.sql` — fact_social_trend_daily, social_module_config |
+| **산출물** | Migration SQL |
+| **의존성** | M1-1 |
+| **리스크** | 낮음 |
+| **DoD** | 테이블 생성, social_module_config 기본값(enabled=false) |
+
+### M9-2: YouTube Collector + Loader [P0]
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | YouTube 트렌드 데이터 수집 |
+| **작업** | `etl/collectors/youtube_collector.py`, `etl/load_youtube_trends.py` — YouTube Data API v3, 키워드 검색, 일별 버즈/감성 |
+| **산출물** | YouTube ETL |
+| **의존성** | M9-1, YOUTUBE_API_KEY |
+| **리스크** | 무료 할당량 (10K units/day) |
+| **DoD** | "성수동 카페" 키워드 검색 → fact_social_trend_daily 적재 |
+
+### M9-3: Naver Collector + Loader [P0]
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | Naver Blog/Cafe 트렌드 수집 |
+| **작업** | `etl/collectors/naver_collector.py`, `etl/load_naver_trends.py` — Naver Search API, 키워드 검색 |
+| **산출물** | Naver ETL |
+| **의존성** | M9-1, NAVER_CLIENT_ID, NAVER_CLIENT_SECRET |
+| **리스크** | 낮음 (25K calls/day) |
+| **DoD** | "성수동 맛집" 키워드 → fact_social_trend_daily 적재 |
+
+### M9-4: Social Agent (LangGraph) [P0]
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | SNS 데이터 분석 에이전트 |
+| **작업** | `backend/agents/social_agent.py` — 모듈 ON/OFF 분기, 트렌드 요약/감성/키워드. `backend/agents/graph.py` — Social Agent 노드 추가. `backend/agents/insight_agent.py` — social_result 통합 |
+| **산출물** | Social Agent |
+| **의존성** | M9-1, M2-3 |
+| **리스크** | 모듈 OFF 회귀 테스트 |
+| **DoD** | SNS ON → 정성 근거 포함, SNS OFF → 기존 동작 유지 |
+
+### M9-5: Social API Endpoint [P0]
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | SNS 데이터 API |
+| **작업** | `backend/api/social.py` — GET /api/social/trends, GET /api/social/config |
+| **산출물** | Social API 엔드포인트 |
+| **의존성** | M9-1 |
+| **리스크** | 낮음 |
+| **DoD** | /api/social/config 응답, /api/social/trends 데이터 반환 |
+
+### M9-6: Frontend SNS UI [P0]
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | SNS 데이터 시각화 |
+| **작업** | Zustand: socialEnabled, socialOverlay, socialData. `frontend/src/types/social.ts`. SocialToggle, SocialBuzzCard, KeywordCloudCard, EvidenceSnippetsCard. 맵 상단 성수동 전체 SNS 요약 배지 |
+| **산출물** | SNS UI 컴포넌트 |
+| **의존성** | M9-5 |
+| **리스크** | H3 매핑 불가 → 전체 지역 수준 표시 |
+| **DoD** | SNS ON → 사이드바에 소셜 카드 표시 |

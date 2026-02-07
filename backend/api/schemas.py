@@ -20,6 +20,7 @@ class HexagonSummary(BaseModel):
     store_cnt: int | None = None
     open_cnt: int | None = None
     close_cnt: int | None = None
+    sales_qoq: float | None = None  # QoQ sales growth rate (ratio)
 
 
 class HexagonsResponse(BaseModel):
@@ -64,6 +65,25 @@ class RiskCard(BaseModel):
     warnings: list[str] = []
 
 
+class RecommendationCard(BaseModel):
+    score: int = Field(0, ge=0, le=100, description="Suitability score 0-100")
+    grade: str = Field("C", description="Grade: S/A/B/C/D")
+    pros: list[str] = []
+    cons: list[str] = []
+    summary: str = ""
+
+
+class TrendPoint(BaseModel):
+    qtr: str
+    value: float | None = None
+
+
+class TrendData(BaseModel):
+    sales: list[TrendPoint] = []
+    flow: list[TrendPoint] = []
+    store: list[TrendPoint] = []
+
+
 class HexagonDetailResponse(BaseModel):
     h3_index: str
     lat: float
@@ -76,6 +96,8 @@ class HexagonDetailResponse(BaseModel):
     competition: CompetitionCard
     growth: GrowthCard
     risk: RiskCard
+    recommendation: RecommendationCard
+    trend: TrendData
 
 
 # ---------- /api/chat ----------
