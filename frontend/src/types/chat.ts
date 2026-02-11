@@ -17,6 +17,7 @@ export interface RecommendationItem {
   rank: number;
   area_name: string;
   reason: string;
+  fit_score?: string;
   metrics?: {
     매출?: string;
     점포수?: string;
@@ -24,13 +25,38 @@ export interface RecommendationItem {
   };
 }
 
+export interface DataTableItem {
+  rank?: number;
+  area_name: string;
+  value: string;
+  description?: string;
+  unit?: string;
+}
+
+export interface RiskItem {
+  level: "high" | "medium" | "low";
+  description: string;
+  mitigation?: string;
+  data?: string;
+}
+
+export interface ContextInfo {
+  data_period?: string;
+  area_scope?: string;
+  note?: string;
+}
+
 export interface InsightEvent {
-  evidence: string[];
-  risks: string[];
-  recommendations: (string | RecommendationItem)[];
-  action_items?: string[];
-  checklist: string[];
+  response_type?: "data_lookup" | "recommendation" | "risk_analysis" | "comparison" | "general";
   summary: string;
+  data_table?: DataTableItem[];
+  insights?: string[];
+  context?: ContextInfo;
+  evidence?: string[];
+  risks?: (string | RiskItem)[];
+  recommendations?: (string | RecommendationItem)[];
+  action_items?: string[];
+  checklist?: string[];
 }
 
 export interface DoneEvent {

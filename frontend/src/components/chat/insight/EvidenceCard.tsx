@@ -11,7 +11,7 @@ export function EvidenceCard({ evidence }: EvidenceCardProps) {
   if (!evidence || evidence.length === 0) return null;
 
   return (
-    <Card className="border-emerald-500/30 bg-gray-900/60 backdrop-blur-sm">
+    <Card className="border-emerald-500/30 bg-white/90 text-slate-900 backdrop-blur-sm dark:bg-gray-900/60 dark:text-white">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm font-medium text-emerald-400">
           <CheckCircle className="h-4 w-4" />
@@ -23,7 +23,7 @@ export function EvidenceCard({ evidence }: EvidenceCardProps) {
           {evidence.map((item, index) => (
             <li
               key={index}
-              className="flex items-start gap-2 text-xs text-white/80"
+              className="flex items-start gap-2 text-xs text-slate-700 dark:text-white/80"
             >
               <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-[10px] text-emerald-400">
                 {index + 1}

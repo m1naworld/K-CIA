@@ -26,7 +26,7 @@ export function RecommendationsCard({
   const isStructured = typeof recommendations[0] === "object";
 
   return (
-    <Card className="border-blue-500/30 bg-gray-900/60 backdrop-blur-sm">
+    <Card className="border-blue-500/30 bg-white/90 text-slate-900 backdrop-blur-sm dark:bg-gray-900/60 dark:text-white">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm font-medium text-blue-400">
           <Lightbulb className="h-4 w-4" />
@@ -45,11 +45,11 @@ export function RecommendationsCard({
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500 text-xs font-bold text-white">
                     {item.rank}
                   </span>
-                  <span className="text-sm font-medium text-white">
+                  <span className="text-sm font-medium text-slate-900 dark:text-white">
                     {item.area_name}
                   </span>
                 </div>
-                <p className="text-xs text-white/70 mb-2">{item.reason}</p>
+                <p className="text-xs text-slate-600 dark:text-white/70 mb-2">{item.reason}</p>
                 {item.metrics && (
                   <div className="flex flex-wrap gap-3 text-xs">
                     {item.metrics.매출 && (
@@ -80,7 +80,7 @@ export function RecommendationsCard({
             {(recommendations as string[]).map((item, index) => (
               <li
                 key={index}
-                className="flex items-start gap-2 text-xs text-white/80"
+                className="flex items-start gap-2 text-xs text-slate-700 dark:text-white/80"
               >
                 <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-[10px] text-blue-400">
                   {index + 1}

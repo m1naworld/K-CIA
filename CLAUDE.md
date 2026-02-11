@@ -11,7 +11,7 @@
 - **한 줄 정의**: "성수동의 어제와 오늘을 3D 지도와 대화로 읽어주는 AI 컨설턴트"
 - **핵심**: 공공데이터(정량) 기반 인사이트. 유튜브/소셜은 옵션 모듈(OFF여도 모든 Q&A 성립)
 - **타겟**: 예비 창업자, 브랜드/마케팅 실무자, 상권 컨설턴트, 임대/투자자
-- **현재 단계**: 시나리오 1 완료 → Phase 3 (S3 팝업 + S4 분기비교) + SNS 모듈 구현 진입
+- **현재 단계**: Phase 3 진행 중 — S3 팝업 완료(M6+M7) → S4 분기비교(M8) 구현 예정 + SNS 모듈(M9)
 
 ---
 
@@ -142,7 +142,7 @@ K-CIA/
 - `fact_facility_area_qtr(area_id, qtr, facility_type, facility_cnt)` — D8 집객시설 (M6)
 
 ### SNS 테이블 (M9)
-- `fact_social_trend_daily(trend_id, area_scope, source, collected_date, keyword, buzz_volume, sentiment_score, sentiment_pos, sentiment_neg, top_keywords, evidence_snippets)`
+- `fact_social_trend_daily(trend_id, area_id, source, collected_date, keyword, buzz_volume, sentiment_score, sentiment_pos, sentiment_neg, top_keywords, evidence_snippets)` — area_id nullable FK (best-effort 상권 매핑, NULL=성수동 전체)
 - `social_module_config(config_key, config_value, updated_at)` — 모듈 ON/OFF 설정
 
 ### 브릿지/메타
@@ -332,10 +332,10 @@ docker-compose up -d
 | M3 UI Layer | ✅ 완료 | 3D Hex맵 + 사이드바 + 챗봇 + 필터/토글 |
 | M4 Eval/Logging | ✅ 완료 | 골든 쿼리 + analysis_run + 이벤트 로그 |
 | M5 Store Weight | ~~삭제~~ | 불필요로 판단하여 삭제 |
-| M6 S3 Data+Backend | 계획됨 | D8 ETL + 인구통계 필터 API |
-| M7 S3 Frontend | 계획됨 | 팝업 모드 UI + 타겟 필터 + 시간대 추천 |
-| M8 S4 비교 | 계획됨 | 분기 비교 API + UI |
-| M9 SNS Module | 계획됨 | YouTube + Naver 수집 + Social Agent + UI |
+| M6 S3 Data+Backend | ✅ 완료 | D8 ETL + 인구통계 필터 API + 시설/인구통계/시간대 카드 |
+| M7 S3 Frontend | ✅ 완료 | 팝업 모드 UI + 타겟 필터 + 시설/인구통계/시간대 사이드바 카드 + 팝업 시각화 |
+| M8 S4 비교 | ✅ 완료 | 분기 비교 API + ComparisonCard + FilterPanel 비교 모드 |
+| M9 SNS Module | ✅ 완료 | YouTube + Naver 수집 + Social Agent + UI |
 
 상세: `docs/PLAN.md`, `docs/TODO.md`, `docs/PROGRESS.md`
 

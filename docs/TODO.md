@@ -217,6 +217,17 @@
 | **리스크** | Deck.gl 초기 로딩 → 데이터 경량화, 레이지 로딩 |
 | **DoD** | 브라우저에서 3D 맵 렌더링 < 3초 |
 
+### M3-1a: 지도 타일 폴백 스타일 [P1] ✅ DONE (2026-02-08)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | Mapbox 토큰 미설정 시에도 맵 타일 렌더링 보장 |
+| **작업** | Mapbox 스타일 대신 CARTO 스타일로 폴백 적용 |
+| **산출물** | 폴백 mapStyle 로직 |
+| **의존성** | M3-1 |
+| **리스크** | 낮음 |
+| **DoD** | 토큰 없이도 지도 타일 표시됨 |
+
 ### M3-2: 필터 패널 + 영역 토글 [P0] ✅ DONE (2026-02-02)
 
 | 항목 | 내용 |
@@ -330,7 +341,7 @@
 
 ## M6: S3 Data + Backend (D8 ETL + 인구통계 필터)
 
-### M6-1: DB Migration (fact_facility_area_qtr) [P0]
+### M6-1: DB Migration (fact_facility_area_qtr) [P0] ✅ DONE (2026-02-07)
 
 | 항목 | 내용 |
 |------|------|
@@ -339,20 +350,20 @@
 | **산출물** | Migration SQL |
 | **의존성** | M1-1 |
 | **리스크** | 낮음 |
-| **DoD** | 테이블 생성 확인 |
+| **DoD** | 테이블 생성, PK/FK 정상 ✓ |
 
-### M6-2: D8 ETL (집객시설) [P0]
+### M6-2: D8 ETL (집객시설) [P0] ✅ DONE (2026-02-07)
 
 | 항목 | 내용 |
 |------|------|
 | **목적** | 집객시설 데이터 수집 및 적재 |
-| **작업** | `etl/load_facility_api.py` — Seoul API `VwsmTrdarHitterIndQq` → fact_facility_area_qtr. seoul_api_collector에 D8_FACILITY 서비스 추가 |
-| **산출물** | ETL 스크립트, 적재 데이터 |
+| **작업** | `etl/load_facility_api.py` — Seoul API `VwsmTrdarFcltyQq` (OA-15580) → fact_facility_area_qtr. seoul_api_collector에 D8_FACILITY 서비스 추가. 원래 계획(VwsmTrdarHitterIndQq/OA-15581)은 API 접근 불가로 대체 (DEC-018) |
+| **산출물** | ETL 스크립트, 적재 데이터 (6,800행, 20분기, 17상권, 20시설유형) |
 | **의존성** | M6-1 |
-| **리스크** | API 컬럼 매핑 확인 필요 |
-| **DoD** | fact_facility_area_qtr 적재, 시설 유형별 건수 조회 |
+| **리스크** | API가 분기 파라미터 무시 → 전체 1회 fetch로 해결 |
+| **DoD** | fact_facility_area_qtr 6,800행 ✓, 2025Q1~Q3 포함 ✓, 시설 유형 20종 ✓ |
 
-### M6-3: Hexagons API 인구통계 필터 [P0]
+### M6-3: Hexagons API 인구통계 필터 [P0] ✅ DONE (2026-02-07)
 
 | 항목 | 내용 |
 |------|------|
@@ -361,20 +372,20 @@
 | **산출물** | 확장된 hexagons API |
 | **의존성** | M2-1 |
 | **리스크** | JSONB 쿼리 성능 |
-| **DoD** | popup mode API 호출 시 target_flow, target_flow_ratio 반환 |
+| **DoD** | popup mode API 호출 시 target_flow, target_flow_ratio 반환 ✓ (이미 기존 코드에 구현됨) |
 
-### M6-4: Hexagon Detail 확장 (시설 + 인구통계 카드) [P0]
+### M6-4: Hexagon Detail 확장 (시설 + 인구통계 카드) [P0] ✅ DONE (2026-02-07)
 
 | 항목 | 내용 |
 |------|------|
 | **목적** | Hex 상세에 시설/인구통계/시간대 추천 카드 추가 |
 | **작업** | `backend/api/schemas.py` — FacilityCard, DemoCard, TimeSlotRecommendation. `backend/api/map.py` — hexagon detail에 추가 필드 |
 | **산출물** | 확장된 hexagon detail API |
-| **의존성** | M6-1, M6-2, M6-3 |
+| **의존성** | M6-1, M6-2 |
 | **리스크** | 낮음 |
-| **DoD** | hexagon detail 응답에 facility, demo, time_slot 필드 포함 |
+| **DoD** | hexagon detail 응답에 facility, demo, time_slot 필드 포함 ✓ |
 
-### M6-5: SQL Agent 프롬프트 업데이트 [P0]
+### M6-5: SQL Agent 프롬프트 업데이트 [P0] ✅ DONE (2026-02-07)
 
 | 항목 | 내용 |
 |------|------|
@@ -383,13 +394,13 @@
 | **산출물** | 업데이트된 SQL Agent |
 | **의존성** | M6-1 |
 | **리스크** | 낮음 |
-| **DoD** | "20대 여성 유동인구 Top3" 질의에 JSONB 추출 SQL 생성 |
+| **DoD** | "20대 여성 유동인구 Top3" 질의에 JSONB 추출 SQL 생성 ✓ |
 
 ---
 
 ## M7: S3 Frontend (팝업 모드 UI)
 
-### M7-1: Zustand Store 확장 [P0]
+### M7-1: Zustand Store 확장 [P0] ✅ DONE (2026-02-07)
 
 | 항목 | 내용 |
 |------|------|
@@ -400,7 +411,7 @@
 | **리스크** | 낮음 |
 | **DoD** | 팝업 모드 상태 전환 동작 |
 
-### M7-2: TypeScript 타입 추가 [P0]
+### M7-2: TypeScript 타입 추가 [P0] ✅ DONE (2026-02-07)
 
 | 항목 | 내용 |
 |------|------|
@@ -411,7 +422,7 @@
 | **리스크** | 낮음 |
 | **DoD** | npm run build 타입 에러 없음 |
 
-### M7-3: 팝업 모드 필터 UI [P0]
+### M7-3: 팝업 모드 필터 UI [P0] ✅ DONE (2026-02-07)
 
 | 항목 | 내용 |
 |------|------|
@@ -422,70 +433,92 @@
 | **리스크** | 낮음 |
 | **DoD** | 팝업 모드 토글 동작, 필터 파라미터 API 전달 |
 
-### M7-4: 사이드바 카드 추가 (3개) [P0]
+### M7-4: 사이드바 카드 추가 (3개) [P0] ✅ DONE (2026-02-07)
 
 | 항목 | 내용 |
 |------|------|
 | **목적** | 팝업 모드 상세 정보 |
-| **작업** | FacilityCard.tsx, DemoCard.tsx, TimeSlotCard.tsx. Sidebar.tsx에 popup 모드 조건부 렌더링 |
+| **작업** | FacilityCard.tsx, DemoCard.tsx, TimeSlotCard.tsx. Sidebar.tsx에 조건부 렌더링 (데이터 있으면 표시) |
 | **산출물** | 사이드바 카드 3개 |
 | **의존성** | M6-4, M7-1 |
 | **리스크** | 낮음 |
-| **DoD** | popup 모드 사이드바에 3개 카드 표시 |
+| **DoD** | 사이드바에 3개 카드 표시 (시설/인구통계/시간대) ✓ |
 
-### M7-5: HexMap 팝업 모드 시각화 [P0]
+### M7-4a: 인구통계 막대 가독성 보정 [P1] ✅ DONE (2026-02-08)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 인구통계 막대 그래프 가독성 개선 |
+| **작업** | 막대 채움/배경 대비 강화, 최소 높이 보장 |
+| **산출물** | DemoCard 막대 스타일 보정 |
+| **의존성** | M7-4 |
+| **리스크** | 낮음 |
+| **DoD** | 라이트/다크 모드에서 막대가 명확히 보임 |
+
+### M7-5: HexMap 팝업 모드 시각화 [P0] ✅ DONE (2026-02-07)
 
 | 항목 | 내용 |
 |------|------|
 | **목적** | 팝업 모드 시각 구분 |
-| **작업** | `frontend/src/components/map/HexMap.tsx` — popup mode: elevation=target_flow, color=target_flow_ratio (파랑→보라) |
+| **작업** | `frontend/src/components/map/HexMap.tsx` — popup mode: elevation=target_flow, color=target_flow_ratio (파랑→보라), 범례 전환, 툴팁 타겟 유동인구 표시 |
 | **산출물** | 확장된 HexMap |
 | **의존성** | M7-1, M6-3 |
 | **리스크** | 낮음 |
-| **DoD** | popup 모드에서 색상/높이 변경 확인 |
+| **DoD** | popup 모드에서 색상/높이/범례/툴팁 변경 확인 ✓ |
 
 ---
 
 ## M8: S4 분기 비교
 
-### M8-1: 비교 API [P0]
+### M8-1: 비교 API [P0] ✅ DONE (2026-02-08)
 
 | 항목 | 내용 |
 |------|------|
 | **목적** | 2개 분기 지표 비교 |
-| **작업** | `backend/api/map.py` — POST /api/map/compare. `backend/api/schemas.py` — ComparisonRequest, ComparisonMetrics, ComparisonResponse |
+| **작업** | `backend/api/map.py` — POST /api/map/compare. `backend/api/schemas.py` — ComparisonRequest, ComparisonMetricSnapshot, ComparisonChange, ComparisonBreakdown, ComparisonResponse |
 | **산출물** | 비교 API 엔드포인트 |
 | **의존성** | M2-1 |
 | **리스크** | 낮음 |
-| **DoD** | 2개 분기 비교 API 호출 시 changes 반환 |
+| **DoD** | 2개 분기 비교 API 호출 시 before/after snapshots + change rates 반환 ✓ |
 
-### M8-2: SQL Agent 비교 쿼리 패턴 [P0]
+### M8-2: SQL Agent 비교 쿼리 패턴 [P0] ✅ DONE (2026-02-08)
 
 | 항목 | 내용 |
 |------|------|
 | **목적** | 분기 비교 자연어 질의 처리 |
-| **작업** | `backend/agents/sql_agent.py` — 분기 비교 SQL 패턴 (WITH before AS, after AS) |
+| **작업** | `backend/agents/sql_agent.py` — 분기 비교 SQL 패턴 (WITH before_q AS, after_q AS CTE) + 비교 키워드 목록 |
 | **산출물** | 업데이트된 SQL Agent |
 | **의존성** | M6-5 |
 | **리스크** | 낮음 |
-| **DoD** | "2024Q3 대비 Q4 매출 변화" 질의에 비교 SQL 생성 |
+| **DoD** | "2024Q3 대비 Q4 매출 변화" 질의에 비교 CTE SQL 생성 ✓ |
 
-### M8-3: Frontend 비교 모드 [P0]
+### M8-3: Frontend 비교 모드 [P0] ✅ DONE (2026-02-08)
 
 | 항목 | 내용 |
 |------|------|
 | **목적** | 비교 모드 UI |
-| **작업** | Zustand: comparisonMode, compareQtrBefore/After. ComparisonPanel.tsx, ComparisonCard.tsx, ComparisonChart.tsx. Sidebar.tsx 조건부 렌더링 |
+| **작업** | Zustand: comparisonMode, compareQtrBefore/After, comparisonData, fetchComparison. FilterPanel 비교 모드 토글 + Before/After Select. ComparisonCard.tsx (듀얼 바 차트, 변화율 그리드, 상세 비교 행, 경고). Sidebar 조건부 렌더링. HexMap 클릭 핸들러 분기 |
 | **산출물** | 비교 UI 컴포넌트 |
 | **의존성** | M8-1 |
 | **리스크** | 낮음 |
-| **DoD** | 비교 모드에서 Before/After 카드 + 차트 렌더링 |
+| **DoD** | 비교 모드에서 Before/After 카드 + 차트 렌더링 ✓ |
+
+### M8-3a: 비교 업종 스코프 토글 [P1] ✅ DONE (2026-02-08)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 비교 모드에서 업종 기준(전체/선택) 전환 |
+| **작업** | `compareCategoryMode` 상태 추가, 업종 변경 시 비교 재조회, FilterPanel 토글 UI 추가 |
+| **산출물** | 업종 스코프 토글 UI + 비교 API 요청 반영 |
+| **의존성** | M8-3 |
+| **리스크** | 낮음 |
+| **DoD** | 업종 선택/토글에 따라 비교 변화율이 변경됨 |
 
 ---
 
 ## M9: SNS Module (YouTube + Naver)
 
-### M9-1: DB Migration (SNS 테이블) [P0]
+### M9-1: DB Migration (SNS 테이블) [P0] ✅ DONE (2026-02-09)
 
 | 항목 | 내용 |
 |------|------|
@@ -494,9 +527,9 @@
 | **산출물** | Migration SQL |
 | **의존성** | M1-1 |
 | **리스크** | 낮음 |
-| **DoD** | 테이블 생성, social_module_config 기본값(enabled=false) |
+| **DoD** | 테이블 생성 ✓, social_module_config 기본값(enabled=false) ✓, DEC-017 area_scope 반영 ✓ |
 
-### M9-2: YouTube Collector + Loader [P0]
+### M9-2: YouTube Collector + Loader [P0] ✅ DONE (2026-02-09)
 
 | 항목 | 내용 |
 |------|------|
@@ -505,9 +538,9 @@
 | **산출물** | YouTube ETL |
 | **의존성** | M9-1, YOUTUBE_API_KEY |
 | **리스크** | 무료 할당량 (10K units/day) |
-| **DoD** | "성수동 카페" 키워드 검색 → fact_social_trend_daily 적재 |
+| **DoD** | Collector: search.list 페이징+quota 에러 처리 ✓, Loader: 일별 집계+감성분석+best-effort 상권매핑+upsert ✓ |
 
-### M9-3: Naver Collector + Loader [P0]
+### M9-3: Naver Collector + Loader [P0] ✅ DONE (2026-02-09)
 
 | 항목 | 내용 |
 |------|------|
@@ -516,9 +549,9 @@
 | **산출물** | Naver ETL |
 | **의존성** | M9-1, NAVER_CLIENT_ID, NAVER_CLIENT_SECRET |
 | **리스크** | 낮음 (25K calls/day) |
-| **DoD** | "성수동 맛집" 키워드 → fact_social_trend_daily 적재 |
+| **DoD** | Collector: Blog+Cafe 검색+페이징+rate limit 에러 처리 ✓, Loader: 일별 집계+감성분석+best-effort 상권매핑+upsert ✓ |
 
-### M9-4: Social Agent (LangGraph) [P0]
+### M9-4: Social Agent (LangGraph) [P0] ✅ DONE (2026-02-09)
 
 | 항목 | 내용 |
 |------|------|
@@ -527,9 +560,9 @@
 | **산출물** | Social Agent |
 | **의존성** | M9-1, M2-3 |
 | **리스크** | 모듈 OFF 회귀 테스트 |
-| **DoD** | SNS ON → 정성 근거 포함, SNS OFF → 기존 동작 유지 |
+| **DoD** | social_agent_node 구현 ✓, graph.py 라우팅 (supervisor→sql→social→insight) ✓, insight_agent social_result 주입 ✓, OFF 시 social_result=None 처리 ✓ |
 
-### M9-5: Social API Endpoint [P0]
+### M9-5: Social API Endpoint [P0] ✅ DONE (2026-02-09)
 
 | 항목 | 내용 |
 |------|------|
@@ -538,15 +571,70 @@
 | **산출물** | Social API 엔드포인트 |
 | **의존성** | M9-1 |
 | **리스크** | 낮음 |
-| **DoD** | /api/social/config 응답, /api/social/trends 데이터 반환 |
+| **DoD** | /api/social/config 응답 ✓, /api/social/trends 데이터 반환 ✓, main.py 라우터 등록 ✓ |
 
-### M9-6: Frontend SNS UI [P0]
+### M9-6: Frontend SNS UI [P0] ✅ DONE (2026-02-09)
 
 | 항목 | 내용 |
 |------|------|
 | **목적** | SNS 데이터 시각화 |
-| **작업** | Zustand: socialEnabled, socialOverlay, socialData. `frontend/src/types/social.ts`. SocialToggle, SocialBuzzCard, KeywordCloudCard, EvidenceSnippetsCard. 맵 상단 성수동 전체 SNS 요약 배지 |
+| **작업** | Zustand: socialEnabled, socialData, fetchSocialConfig/fetchSocialTrends/toggleSocial. `frontend/src/types/social.ts`. SocialBuzzCard (버즈량/감성/소스별/키워드/에비던스/일별 추이). FilterPanel 소셜 토글 |
 | **산출물** | SNS UI 컴포넌트 |
 | **의존성** | M9-5 |
-| **리스크** | H3 매핑 불가 → 전체 지역 수준 표시 |
-| **DoD** | SNS ON → 사이드바에 소셜 카드 표시 |
+| **리스크** | 낮음 |
+| **DoD** | FilterPanel 소셜 토글 ✓, SocialBuzzCard 렌더링 ✓, Sidebar 조건부 표시 ✓, fetchSocialConfig 초기 호출 ✓ |
+
+### M9-7: Social Trends 상권/업종/H3 매핑 연동 [P1] ✅ DONE (2026-02-09)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 헥스 클릭/업종 선택 시 해당 상권의 소셜 트렌드만 필터링 + ETL 매핑률 개선 |
+| **작업** | (1) Backend: `/api/social/trends`에 h3_index/area_id/cat_code 필터 + CATEGORY_SOCIAL_MAP + 폴백 로직. (2) ETL: get_area_mapping()에 real_name + 랜드마크 매핑 추가 (카페거리 중복 방지). (3) Frontend: fetchSocialTrends 파라미터화, fetchHexDetail/setCategory/toggleSocial에서 자동 재조회, 필터 컨텍스트 뱃지 UI, 소셜 로딩 스켈레톤 |
+| **산출물** | 7개 파일 수정 (social.py, load_youtube_trends.py, load_naver_trends.py, mapStore.ts, social.ts, SocialBuzzCard.tsx, Sidebar.tsx) |
+| **의존성** | M9-5, M9-6 |
+| **리스크** | 매핑률 목표(30%+) 미달 시 대부분 폴백 표시 가능 |
+| **DoD** | h3_index 필터 API 동작 ✓, cat_code 필터 API 동작 ✓, 폴백(is_fallback=true) 동작 ✓, 프론트 자동 재조회 ✓, 필터 뱃지 표시 ✓ |
+
+### M9-8: LLM + Kakao Local 상권 매핑 보강 [P1] ✅ DONE (2026-02-09)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 키워드 매핑 실패 시 장소 추출 + 지오코딩으로 area_id 보강 |
+| **작업** | `etl/place_mapper.py` 신규, `load_youtube_trends.py`/`load_naver_trends.py`에 LLM+Kakao 매핑 경로 추가, `.env.example`에 `KAKAO_REST_API_KEY` 추가 |
+| **산출물** | LLM+지오코딩 기반 매핑 유틸리티 + ETL 연동 |
+| **의존성** | GEMINI_API_KEY, KAKAO_REST_API_KEY |
+| **리스크** | Kakao API 쿼터/속도, LLM 호출 비용 |
+| **DoD** | 키워드 미매칭 케이스에서 area_id 보강 ✓, 비활성 시 기존 로직 유지 ✓ |
+
+### M9-9: YouTube 해시태그 기반 상호/장소 단서 보강 [P1] ✅ DONE (2026-02-09)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | YouTube 설명 부족 시 해시태그를 활용해 장소 단서 추가 |
+| **작업** | `etl/load_youtube_trends.py`에서 해시태그 추출 후 매칭/LLM 입력에 포함 |
+| **산출물** | 해시태그 보강 로직 |
+| **의존성** | M9-8 |
+| **리스크** | 해시태그 노이즈 증가 가능 |
+| **DoD** | 해시태그 포함 매칭/LLM 입력 ✓ |
+
+### M9-10: 주소/상호 정제 기반 Kakao 지오코딩 보강 [P1] ✅ DONE (2026-02-09)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 주소 문자열/지점 표기 정제를 통해 지오코딩 매핑률 개선 |
+| **작업** | `etl/place_mapper.py`에 주소 추출 + Kakao 주소검색 + 상호명 정규화 추가 |
+| **산출물** | 주소/상호 보강 로직 |
+| **의존성** | M9-8 |
+| **리스크** | 주소 파싱 노이즈 가능 |
+| **DoD** | 주소/상호 정제 경로 동작 ✓ |
+
+### M9-12: SNS ETL 공간 매핑 구조 개선 [P1] ✅ DONE (2026-02-10)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | SNS ETL 매핑률 근본 개선 — videos.list 확장 + per-area 집계 + 좌표 기반 공간 매핑 |
+| **작업** | (1) `youtube_collector.py` get_video_details() 메서드 추가, (2) `load_youtube_trends.py` 대규모 재작성 (enrich_videos + match_area_ids + aggregate_by_date_area + spatial-first), (3) `load_naver_trends.py` 완전 재작성 (동일 구조), (4) `place_mapper.py` resolve_area_ids_multi() 추가 |
+| **산출물** | YouTube 10/17 상권 (61.3% area-mapped), Naver 15/17 상권 (90.7% area-mapped) |
+| **의존성** | M9-8, M9-10 |
+| **리스크** | Kakao API 쿼터, Gemini rate limit |
+| **DoD** | videos.list enrichment ✓, per-(date, area_id) aggregation ✓, spatial-first mapping ✓, YouTube 10/17 ✓, Naver 15/17 ✓ |

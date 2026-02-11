@@ -20,12 +20,14 @@ import requests
 # D2: 점포(행정동) - VwsmAdstrdStorQq  
 # D5: 유동인구(상권) - VwsmTrdarFlpopQq
 # D11: 실시간 도시데이터 - citydata_ppltn
+# D8: 집객시설(상권) - VwsmTrdarFcltyQq
 
 API_SERVICES = {
     "D1_SALES": "VwsmTrdarSelngQq",      # 상권분석서비스(추정매출-상권) OA-15572
     "D2_STORE": "VwsmAdstrdStorW",        # 상권분석서비스(점포-행정동) OA-22172
     "D2_STORE_TRDAR": "VwsmTrdarStorQq",  # 상권분석서비스(점포-상권) OA-15574
     "D5_FLOW": "VwsmTrdarFlpopQq",       # 상권분석서비스(유동인구-상권) OA-15568
+    "D8_FACILITY": "VwsmTrdarFcltyQq",   # 상권분석서비스(집객시설-상권) OA-15580
     "D11_REALTIME": "citydata",          # 실시간 도시데이터 OA-21285 (장소별 호출)
     "AREA_INFO": "TbgisTrdarRelm",       # 상권영역정보 OA-15560 (상권코드+좌표+면적)
 }

@@ -18,7 +18,7 @@ export function ChatMessages() {
 
   if (messages.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center text-center text-sm text-white/40">
+      <div className="flex h-full flex-col items-center justify-center text-center text-sm text-slate-500 dark:text-white/40">
         <p>성수동 상권에 대해 질문해보세요.</p>
         <p className="mt-1 text-xs">예: &quot;카페 매출 Top3 추천해줘&quot;</p>
       </div>

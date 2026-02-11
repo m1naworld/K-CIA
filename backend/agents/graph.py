@@ -7,6 +7,7 @@ from typing import Any, TypedDict
 from langgraph.graph import END, StateGraph
 
 from agents.insight_agent import insight_agent_node
+from agents.social_agent import social_agent_node
 from agents.sql_agent import sql_agent_node
 from agents.supervisor import supervisor_node
 
@@ -19,6 +20,7 @@ class AgentState(TypedDict, total=False):
     route: str  # "sql" | "insight" | "both"
     sql_text: str | None
     sql_result: Any
+    social_result: dict | None  # M9: SNS trend data (None if module OFF)
     insight: dict | None
     data_asof: str | None
     selected_hex_detail: dict | None
@@ -31,22 +33,34 @@ def _route_after_supervisor(state: AgentState) -> str:
         return "sql_agent"
     if route == "both":
         return "sql_agent"
-    return "insight_agent"
+    # "insight" → social first, then insight
+    return "social_agent"
 
 
 def _route_after_sql(state: AgentState) -> str:
-    """After SQL agent: go to END or insight_agent depending on route."""
+    """After SQL agent: go to social_agent (which leads to insight or END)."""
     if state.get("route") == "both":
-        return "insight_agent"
+        return "social_agent"
     return END
 
 
+def _route_after_social(state: AgentState) -> str:
+    """After social agent: always go to insight_agent."""
+    return "insight_agent"
+
+
 def build_graph() -> Any:
-    """Build and compile the K-CIA agent graph."""
+    """Build and compile the K-CIA agent graph.
+
+    Flow:
+        supervisor → sql_agent (if sql/both) → social_agent → insight_agent → END
+        supervisor → social_agent (if insight) → insight_agent → END
+    """
     graph = StateGraph(AgentState)
 
     graph.add_node("supervisor", supervisor_node)
     graph.add_node("sql_agent", sql_agent_node)
+    graph.add_node("social_agent", social_agent_node)
     graph.add_node("insight_agent", insight_agent_node)
 
     graph.set_entry_point("supervisor")
@@ -54,13 +68,14 @@ def build_graph() -> Any:
     graph.add_conditional_edges(
         "supervisor",
         _route_after_supervisor,
-        {"sql_agent": "sql_agent", "insight_agent": "insight_agent"},
+        {"sql_agent": "sql_agent", "social_agent": "social_agent"},
     )
     graph.add_conditional_edges(
         "sql_agent",
         _route_after_sql,
-        {"insight_agent": "insight_agent", END: END},
+        {"social_agent": "social_agent", END: END},
     )
+    graph.add_edge("social_agent", "insight_agent")
     graph.add_edge("insight_agent", END)
 
     return graph.compile()

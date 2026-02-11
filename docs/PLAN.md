@@ -154,33 +154,33 @@
 
 > 불필요로 판단하여 삭제. 면적 기반 weight만 사용.
 
-### M6: S3 Data + Backend (D8 ETL + 인구통계 필터)
+### M6: S3 Data + Backend (D8 ETL + 인구통계 필터) ✅ DONE
 
 | 항목 | 내용 |
 |------|------|
 | **입력** | M4 완료, D8 집객시설 API, fact_flow_area_qtr.flow_by_demo JSONB |
 | **작업 체크리스트** | |
-| | - [ ] `004_s3_facility.sql` — fact_facility_area_qtr 테이블 |
-| | - [ ] D8 ETL: Seoul API `VwsmTrdarHitterIndQq` → fact_facility_area_qtr |
-| | - [ ] Hexagons API: target_gender, target_age, mode 파라미터 추가 |
-| | - [ ] Hexagon Detail: FacilityCard, DemoCard, TimeSlotRecommendation 추가 |
-| | - [ ] SQL Agent: flow_by_demo JSONB 패턴, fact_facility_area_qtr 스키마 추가 |
+| | - [x] `004_s3_facility.sql` — fact_facility_area_qtr 테이블 |
+| | - [x] D8 ETL: Seoul API `VwsmTrdarFcltyQq` → fact_facility_area_qtr (DEC-018: OA-15581→OA-15580) |
+| | - [x] Hexagons API: target_gender, target_age, mode 파라미터 (기존 구현 확인) |
+| | - [x] Hexagon Detail: FacilityCard, DemoCard, TimeSlotRecommendation 추가 |
+| | - [x] SQL Agent: flow_by_demo JSONB 패턴, fact_facility_area_qtr 스키마 추가 |
 | **산출물** | Migration, ETL, 확장된 API |
-| **DoD** | popup mode API 호출 시 인구통계 필터 동작, 시설 카드 반환 |
+| **DoD** | popup mode API 호출 시 인구통계 필터 동작 ✓, 시설 카드 반환 ✓, SQL Agent 인구통계/시설 질의 처리 ✓ |
 
-### M7: S3 Frontend (팝업 모드 UI)
+### M7: S3 Frontend (팝업 모드 UI) ✅ DONE
 
 | 항목 | 내용 |
 |------|------|
 | **입력** | M6 완료 |
 | **작업 체크리스트** | |
-| | - [ ] Zustand: mode, targetGender, targetAge 상태 |
-| | - [ ] TypeScript: FacilityCard, DemoCard, TimeSlotRecommendation 인터페이스 |
-| | - [ ] PopupModePanel: 성별/연령대 필터 UI |
-| | - [ ] 사이드바: FacilityCard, DemoCard, TimeSlotCard 3개 추가 |
-| | - [ ] HexMap: popup 모드 시각화 (target_flow 기반 색상/높이) |
+| | - [x] Zustand: mode, targetGender, targetAge 상태 |
+| | - [x] TypeScript: FacilityCard, DemoCard, TimeSlotRecommendation 인터페이스 |
+| | - [x] PopupModePanel: 성별/연령대 필터 UI |
+| | - [x] 사이드바: FacilityCard, DemoCard, TimeSlotCard 3개 추가 |
+| | - [x] HexMap: popup 모드 시각화 (target_flow 기반 색상/높이) |
 | **산출물** | 팝업 모드 UI 컴포넌트 |
-| **DoD** | 팝업 모드 토글 → API 호출에 인구통계 파라미터 포함, 추가 카드 렌더링 |
+| **DoD** | 팝업 모드 토글 → API 호출에 인구통계 파라미터 포함 ✓, 추가 카드 렌더링 ✓, 팝업 색상/높이 시각화 ✓ |
 
 ### M8: S4 분기 비교 (비교 API + UI)
 

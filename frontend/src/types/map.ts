@@ -30,13 +30,6 @@ export interface Category {
   service_name: string;
 }
 
-export interface AreaScopeItem {
-  area_id: number;
-  area_type: string;
-  area_code: string;
-  area_name: string;
-}
-
 export interface MapViewState {
   longitude: number;
   latitude: number;
@@ -98,6 +91,96 @@ export interface TrendData {
   store: TrendPoint[];
 }
 
+// ---------- Facility / Demo / TimeSlot (M6-4 확장) ----------
+
+export interface FacilityItem {
+  facility_type: string;
+  label: string;
+  count: number;
+}
+
+export interface FacilityCard {
+  total_count: number;
+  facilities: FacilityItem[];
+  top_types: string[];
+}
+
+export interface DemoGenderRatio {
+  male: number | null;
+  female: number | null;
+}
+
+export interface DemoAgeItem {
+  age_group: string; // "10" | "20" | "30" | "40" | "50" | "60+"
+  ratio: number;
+  count: number;
+}
+
+export interface DemoCard {
+  gender: DemoGenderRatio;
+  age_distribution: DemoAgeItem[];
+  peak_age_group: string | null;
+  peak_gender: string | null;
+}
+
+export interface TimeSlotItem {
+  hour_range: string;
+  label: string;
+  flow_ratio: number;
+}
+
+export interface TimeSlotRecommendation {
+  peak_hours: number[];
+  peak_weekday: string | null;
+  off_peak_hours: number[];
+  recommendations: TimeSlotItem[];
+}
+
+// ---------- Comparison (M8) ----------
+
+export interface ComparisonMetricSnapshot {
+  sales_amt: number | null;
+  sales_cnt: number | null;
+  flow_total: number | null;
+  store_cnt: number | null;
+  open_cnt: number | null;
+  close_cnt: number | null;
+  close_rate: number | null;
+}
+
+export interface ComparisonChange {
+  sales_change_rate: number | null;
+  sales_diff: number | null;
+  flow_change_rate: number | null;
+  flow_diff: number | null;
+  store_change_rate: number | null;
+  store_diff: number | null;
+}
+
+export interface ComparisonBreakdown {
+  flow_by_weekday_before: Record<string, number> | null;
+  flow_by_weekday_after: Record<string, number> | null;
+  flow_by_hour_before: Record<string, number> | null;
+  flow_by_hour_after: Record<string, number> | null;
+  flow_by_demo_before: Record<string, number> | null;
+  flow_by_demo_after: Record<string, number> | null;
+}
+
+export interface ComparisonResponse {
+  h3_index: string;
+  qtr_before: string;
+  qtr_after: string;
+  areas: string[];
+  before: ComparisonMetricSnapshot;
+  after: ComparisonMetricSnapshot;
+  change: ComparisonChange;
+  breakdown: ComparisonBreakdown | null;
+  warnings: string[];
+  data_asof: string;
+}
+
+// ---------- Hexagon Detail Response ----------
+
 export interface HexagonDetailResponse {
   h3_index: string;
   lat: number;
@@ -112,4 +195,7 @@ export interface HexagonDetailResponse {
   risk: RiskCard;
   recommendation: RecommendationCard;
   trend: TrendData;
+  facility: FacilityCard | null;
+  demo: DemoCard | null;
+  time_slot: TimeSlotRecommendation | null;
 }

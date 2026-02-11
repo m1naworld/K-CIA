@@ -26,16 +26,16 @@ export function MetricCard({
   variant = "default",
 }: MetricCardProps) {
   const borderColor = {
-    default: "border-white/10",
+    default: "border-slate-200 dark:border-white/10",
     warning: "border-amber-500/30",
     danger: "border-red-500/30",
   }[variant];
 
   return (
-    <Card className={`bg-gray-900/60 ${borderColor} backdrop-blur-sm`}>
+    <Card className={`bg-white/90 text-slate-900 dark:bg-gray-900/60 dark:text-white ${borderColor} backdrop-blur-sm`}>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-sm font-medium text-white/80">
+          <CardTitle className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-white/80">
             {icon}
             {title}
           </CardTitle>
@@ -138,8 +138,8 @@ export function BarDistribution({ data, labelMap }: BarDistributionProps) {
                 style={{ height: `${height}%` }}
               />
             </div>
-            <span className="mt-1 text-[9px] text-white/40">{label}</span>
-            <div className="pointer-events-none absolute -top-6 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded bg-gray-800 px-1.5 py-0.5 text-[10px] text-white opacity-0 transition-opacity group-hover:opacity-100">
+            <span className="mt-1 text-[9px] text-slate-500 dark:text-white/40">{label}</span>
+            <div className="pointer-events-none absolute -top-6 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded bg-white px-1.5 py-0.5 text-[10px] text-slate-700 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 dark:bg-gray-800 dark:text-white">
               {value.toLocaleString()}
             </div>
           </div>
@@ -165,14 +165,14 @@ export function StatRow({ label, value, unit, highlight }: StatRowProps) {
 
   return (
     <div className="flex items-center justify-between py-1">
-      <span className="text-xs text-white/50">{label}</span>
+      <span className="text-xs text-slate-500 dark:text-white/50">{label}</span>
       <span
         className={`text-sm font-medium ${
-          highlight ? "text-amber-300" : "text-white"
+          highlight ? "text-amber-500 dark:text-amber-300" : "text-slate-900 dark:text-white"
         }`}
       >
         {displayValue}
-        {unit && <span className="ml-0.5 text-xs text-white/50">{unit}</span>}
+        {unit && <span className="ml-0.5 text-xs text-slate-500 dark:text-white/50">{unit}</span>}
       </span>
     </div>
   );
@@ -191,7 +191,7 @@ export function WarningList({ warnings }: WarningListProps) {
       {warnings.map((warning, i) => (
         <li
           key={i}
-          className="flex items-start gap-2 text-xs text-amber-300/90"
+          className="flex items-start gap-2 text-xs text-amber-700 dark:text-amber-300/90"
         >
           <span className="mt-0.5">⚠</span>
           <span>{warning}</span>

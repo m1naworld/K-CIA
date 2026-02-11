@@ -36,7 +36,7 @@ export function useStreamingChat(): UseStreamingChatReturn {
     setStreaming,
   } = useChatStore();
 
-  const { areaType, category, quarter, hexDetail } = useMapStore();
+  const { category, quarter, hexDetail } = useMapStore();
 
   const handleEvent = useCallback(
     (
@@ -87,7 +87,7 @@ export function useStreamingChat(): UseStreamingChatReturn {
       addUserMessage(question);
 
       trackEvent("ASK", {
-        area_type: areaType,
+        area_type: "COMMERCIAL_AREA",
         category,
         qtr: quarter,
         question_len: question.length,
@@ -104,7 +104,7 @@ export function useStreamingChat(): UseStreamingChatReturn {
       const payload: ChatRequest = {
         question,
         messages: historyMessages,
-        area_type: areaType,
+        area_type: "COMMERCIAL_AREA",
       };
       if (category && category !== "all") {
         payload.category = category;
@@ -194,7 +194,6 @@ export function useStreamingChat(): UseStreamingChatReturn {
     [
       isStreaming,
       messages,
-      areaType,
       category,
       quarter,
       addUserMessage,

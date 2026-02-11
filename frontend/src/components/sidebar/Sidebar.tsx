@@ -13,6 +13,11 @@ import {
   BarDistribution,
   WarningList,
 } from "./MetricCard";
+import FacilityCard from "./FacilityCard";
+import DemoCard from "./DemoCard";
+import TimeSlotCard from "./TimeSlotCard";
+import ComparisonCard from "./ComparisonCard";
+import SocialBuzzCard from "./SocialBuzzCard";
 
 // Icons as simple SVGs
 const FlowIcon = () => (
@@ -69,27 +74,33 @@ export default function Sidebar() {
     selectedAreaName,
     selectedRealName,
     closeSidebar,
+    comparisonMode,
+    comparisonData,
+    comparisonLoading,
+    socialEnabled,
+    socialData,
+    socialLoading,
   } = useMapStore();
 
   if (!sidebarOpen) return null;
 
   return (
-    <div className="flex h-full w-80 flex-col border-l border-white/10 bg-gray-950">
+    <div className="flex h-full w-80 flex-col border-l border-slate-200 bg-white dark:border-white/10 dark:bg-gray-950">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+      <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-white/10">
         <div>
-          <h2 className="text-sm font-semibold text-white">
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
             {selectedRealName ?? selectedAreaName ?? "구역 상세"}
           </h2>
           {selectedRealName && selectedAreaName && (
-            <p className="text-xs text-white/50">{selectedAreaName}</p>
+            <p className="text-xs text-slate-500 dark:text-white/50">{selectedAreaName}</p>
           )}
         </div>
         <Button
           variant="ghost"
           size="sm"
           onClick={closeSidebar}
-          className="h-8 w-8 p-0 text-white/50 hover:bg-white/10 hover:text-white"
+          className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-white/50 dark:hover:bg-white/10 dark:hover:text-white"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -100,7 +111,20 @@ export default function Sidebar() {
       {/* Content */}
       <ScrollArea className="flex-1">
         <div className="space-y-3 p-4">
-          {hexDetailLoading ? (
+          {comparisonMode ? (
+            /* === Comparison Mode === */
+            comparisonLoading ? (
+              <LoadingSkeleton />
+            ) : comparisonData ? (
+              <ComparisonCard data={comparisonData} />
+            ) : (
+              <div className="flex h-40 items-center justify-center text-center text-sm text-slate-500 dark:text-white/40">
+                비교할 분기를 선택하고
+                <br />
+                헥사곤을 클릭하세요
+              </div>
+            )
+          ) : hexDetailLoading ? (
             <LoadingSkeleton />
           ) : hexDetail ? (
             <>
@@ -112,7 +136,7 @@ export default function Sidebar() {
                 >
                   기준: {hexDetail.qtr}
                 </Badge>
-                <span className="text-[10px] text-white/40">
+                <span className="text-[10px] text-slate-500 dark:text-white/40">
                   {hexDetail.data_asof}
                 </span>
               </div>
@@ -124,7 +148,7 @@ export default function Sidebar() {
                     <Badge
                       key={area}
                       variant="secondary"
-                      className="bg-white/5 text-xs text-white/70"
+                      className="bg-slate-100 text-xs text-slate-600 dark:bg-white/5 dark:text-white/70"
                     >
                       {area}
                     </Badge>
@@ -156,7 +180,7 @@ export default function Sidebar() {
                 )}
                 {hexDetail.flow.flow_by_weekday && (
                   <div className="mt-3">
-                    <p className="mb-1 text-[10px] text-white/40">요일별 분포</p>
+                    <p className="mb-1 text-[10px] text-slate-500 dark:text-white/40">요일별 분포</p>
                     <BarDistribution
                       data={hexDetail.flow.flow_by_weekday}
                       labelMap={WEEKDAY_LABELS}
@@ -213,20 +237,20 @@ export default function Sidebar() {
                 />
                 <div className="mt-2 flex gap-4">
                   <div className="flex-1">
-                    <p className="text-[10px] text-white/40">개업</p>
+                    <p className="text-[10px] text-slate-500 dark:text-white/40">개업</p>
                     <p className="text-sm font-medium text-emerald-400">
                       +{hexDetail.competition.open_cnt ?? 0}
                     </p>
                   </div>
                   <div className="flex-1">
-                    <p className="text-[10px] text-white/40">폐업</p>
+                    <p className="text-[10px] text-slate-500 dark:text-white/40">폐업</p>
                     <p className="text-sm font-medium text-red-400">
                       -{hexDetail.competition.close_cnt ?? 0}
                     </p>
                   </div>
                   <div className="flex-1">
-                    <p className="text-[10px] text-white/40">폐업률</p>
-                    <p className="text-sm font-medium text-white">
+                    <p className="text-[10px] text-slate-500 dark:text-white/40">폐업률</p>
+                    <p className="text-sm font-medium text-slate-900 dark:text-white">
                       {hexDetail.competition.close_rate !== null
                         ? `${(hexDetail.competition.close_rate * 100).toFixed(1)}%`
                         : "-"}
@@ -280,7 +304,7 @@ export default function Sidebar() {
                 />
                 <WarningList warnings={hexDetail.risk.warnings} />
                 {hexDetail.risk.warnings.length === 0 && (
-                  <p className="mt-2 text-xs text-emerald-400/80">
+                  <p className="mt-2 text-xs text-emerald-600/80 dark:text-emerald-400/80">
                     특별한 위험 신호 없음
                   </p>
                 )}
@@ -315,14 +339,14 @@ export default function Sidebar() {
                     >
                       {hexDetail.recommendation.grade}
                     </span>
-                    <span className="text-xs text-white/60">
+                    <span className="text-xs text-slate-600 dark:text-white/60">
                       {hexDetail.recommendation.summary}
                     </span>
                   </div>
                 </div>
                 {hexDetail.recommendation.pros.length > 0 && (
                   <div className="mt-2">
-                    <p className="text-[10px] text-white/40">긍정 요인</p>
+                    <p className="text-[10px] text-slate-500 dark:text-white/40">긍정 요인</p>
                     <ul className="mt-1 space-y-0.5">
                       {hexDetail.recommendation.pros.map((p, i) => (
                         <li
@@ -338,7 +362,7 @@ export default function Sidebar() {
                 )}
                 {hexDetail.recommendation.cons.length > 0 && (
                   <div className="mt-2">
-                    <p className="text-[10px] text-white/40">부정 요인</p>
+                    <p className="text-[10px] text-slate-500 dark:text-white/40">부정 요인</p>
                     <ul className="mt-1 space-y-0.5">
                       {hexDetail.recommendation.cons.map((c, i) => (
                         <li
@@ -353,9 +377,33 @@ export default function Sidebar() {
                   </div>
                 )}
               </MetricCard>
+
+              {/* Facility Card (M7-4) */}
+              {hexDetail.facility && (
+                <FacilityCard data={hexDetail.facility} />
+              )}
+
+              {/* Demo Card (M7-4) */}
+              {hexDetail.demo && (
+                <DemoCard data={hexDetail.demo} />
+              )}
+
+              {/* TimeSlot Card (M7-4) */}
+              {hexDetail.time_slot && (
+                <TimeSlotCard data={hexDetail.time_slot} />
+              )}
+
+              {/* Social Buzz Card (M9) */}
+              {socialEnabled && (
+                socialLoading
+                  ? <Skeleton className="h-48 w-full bg-slate-200/80 dark:bg-white/5" />
+                  : socialData
+                    ? <SocialBuzzCard data={socialData} />
+                    : null
+              )}
             </>
           ) : (
-            <div className="flex h-40 items-center justify-center text-sm text-white/40">
+            <div className="flex h-40 items-center justify-center text-sm text-slate-500 dark:text-white/40">
               데이터를 불러올 수 없습니다
             </div>
           )}
@@ -375,8 +423,8 @@ function GrowthStat({
   if (rate === null) {
     return (
       <div className="text-center">
-        <p className="text-[10px] text-white/40">{label}</p>
-        <p className="text-sm text-white/30">-</p>
+        <p className="text-[10px] text-slate-500 dark:text-white/40">{label}</p>
+        <p className="text-sm text-slate-400 dark:text-white/30">-</p>
       </div>
     );
   }
@@ -385,7 +433,7 @@ function GrowthStat({
   const pct = rate * 100; // API returns ratio (0.0219 = 2.19%)
   return (
     <div className="text-center">
-      <p className="text-[10px] text-white/40">{label}</p>
+      <p className="text-[10px] text-slate-500 dark:text-white/40">{label}</p>
       <p
         className={`text-sm font-medium ${
           isPositive ? "text-emerald-400" : "text-red-400"
@@ -401,12 +449,12 @@ function GrowthStat({
 function LoadingSkeleton() {
   return (
     <div className="space-y-3">
-      <Skeleton className="h-6 w-24 bg-white/5" />
-      <Skeleton className="h-32 w-full bg-white/5" />
-      <Skeleton className="h-24 w-full bg-white/5" />
-      <Skeleton className="h-24 w-full bg-white/5" />
-      <Skeleton className="h-20 w-full bg-white/5" />
-      <Skeleton className="h-20 w-full bg-white/5" />
+      <Skeleton className="h-6 w-24 bg-slate-200/80 dark:bg-white/5" />
+      <Skeleton className="h-32 w-full bg-slate-200/80 dark:bg-white/5" />
+      <Skeleton className="h-24 w-full bg-slate-200/80 dark:bg-white/5" />
+      <Skeleton className="h-24 w-full bg-slate-200/80 dark:bg-white/5" />
+      <Skeleton className="h-20 w-full bg-slate-200/80 dark:bg-white/5" />
+      <Skeleton className="h-20 w-full bg-slate-200/80 dark:bg-white/5" />
     </div>
   );
 }

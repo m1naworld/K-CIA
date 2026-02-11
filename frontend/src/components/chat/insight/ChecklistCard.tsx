@@ -11,7 +11,7 @@ export function ChecklistCard({ checklist }: ChecklistCardProps) {
   if (!checklist || checklist.length === 0) return null;
 
   return (
-    <Card className="border-violet-500/30 bg-gray-900/60 backdrop-blur-sm">
+    <Card className="border-violet-500/30 bg-white/90 text-slate-900 backdrop-blur-sm dark:bg-gray-900/60 dark:text-white">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm font-medium text-violet-400">
           <ListChecks className="h-4 w-4" />
@@ -23,7 +23,7 @@ export function ChecklistCard({ checklist }: ChecklistCardProps) {
           {checklist.map((item, index) => (
             <li
               key={index}
-              className="flex items-start gap-2 text-xs text-white/80"
+              className="flex items-start gap-2 text-xs text-slate-700 dark:text-white/80"
             >
               <span className="mt-0.5 text-violet-400">-</span>
               <span>{item}</span>

@@ -9,6 +9,8 @@ import { RecommendationsCard } from "./insight/RecommendationsCard";
 import { ActionItemsCard } from "./insight/ActionItemsCard";
 import { ChecklistCard } from "./insight/ChecklistCard";
 import { SqlCard } from "./insight/SqlCard";
+import { InsightsCard } from "./insight/InsightsCard";
+import { DataTableCard } from "./insight/DataTableCard";
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -32,7 +34,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
     <div className="flex flex-col gap-2">
       {/* Streaming indicator */}
       {message.isStreaming && !message.insight && !message.sql && (
-        <div className="flex items-center gap-2 text-sm text-white/60">
+        <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-white/60">
           <Loader2 className="h-4 w-4 animate-spin" />
           <span>
             {message.route === "sql"
@@ -58,7 +60,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
       {/* Summary */}
       {message.content && !message.error && (
-        <div className="rounded-lg bg-gray-800/60 px-3 py-2 text-sm text-white/90">
+        <div className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-900 dark:bg-gray-800/60 dark:text-white/90">
           {message.content}
         </div>
       )}
@@ -66,6 +68,14 @@ export function ChatMessage({ message }: ChatMessageProps) {
       {/* Insight Cards - only show if data exists */}
       {message.insight && (
         <div className="flex flex-col gap-2">
+          {/* Data Table (for data_lookup responses) */}
+          {message.insight.data_table && message.insight.data_table.length > 0 && (
+            <DataTableCard data={message.insight.data_table} />
+          )}
+          {/* Insights (analysis/interpretation) */}
+          {message.insight.insights && message.insight.insights.length > 0 && (
+            <InsightsCard insights={message.insight.insights} />
+          )}
           {message.insight.evidence && message.insight.evidence.length > 0 && (
             <EvidenceCard evidence={message.insight.evidence} />
           )}
@@ -89,7 +99,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
         <div className="flex justify-end">
           <Badge
             variant="outline"
-            className="border-white/20 bg-gray-800/50 text-[10px] text-white/50"
+            className="border-slate-200 bg-slate-100 text-[10px] text-slate-500 dark:border-white/20 dark:bg-gray-800/50 dark:text-white/50"
           >
             기준: {message.dataAsof}
           </Badge>

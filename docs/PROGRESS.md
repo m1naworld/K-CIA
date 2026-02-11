@@ -45,6 +45,242 @@
 
 ---
 
+## 2026-02-10 — M9-12: SNS ETL 공간 매핑 구조 개선
+
+### 상태: DONE
+
+### 배경/문제
+
+- YouTube 매핑률 저조 (5/17 상권 커버, 41.9% area-mapped)
+- 근본 원인 3가지:
+  1. `search.list` API가 설명을 ~150자로 절단 → 주소/상호 정보 손실
+  2. 일별 집계 시 `majority_vote`로 area_id 1개만 선택 → 상권 다양성 파괴
+  3. 키워드 기반 매핑만으로는 상권명 표기 다양성 커버 불가
+
+### 완료한 작업
+
+**Phase 1: videos.list API 확장**
+- [x] `youtube_collector.py` — `get_video_details()` 메서드 추가 (1 unit per 50 IDs)
+- [x] `load_youtube_trends.py` — `enrich_videos()` 함수로 전체 설명+태그 보강
+
+**Phase 2: per-(date, area_id) 집계 구조 변경**
+- [x] YouTube: `match_area_id` → `match_area_ids` (multi-return)
+- [x] YouTube: `aggregate_by_date` → `aggregate_by_date_area` keyed by `(date, area_id|None)`
+- [x] Naver: 동일 구조로 완전 재작성
+
+**Phase 3: 좌표 기반 공간 매핑 (Spatial-first)**
+- [x] `place_mapper.py` — `resolve_area_ids_multi()` 추가 (list[list[int]] 반환)
+  - 주소 추출 → Kakao 주소검색 → ST_Intersects
+  - Gemini Flash 장소 추출 → Kakao 키워드검색 → ST_Intersects
+- [x] YouTube/Naver ETL: 공간 매핑 PRIMARY → 키워드 매핑 FALLBACK 구조로 전환
+- [x] 각 콘텐츠가 다수 상권에 동시 매핑 가능 + None(전체) 버킷 항상 포함
+
+### 결과
+
+| 소스 | 변경 전 (상권 커버) | 변경 후 | area-mapped |
+|------|---------------------|---------|-------------|
+| YouTube | 5/17 (29%) | 10/17 (59%) | 61.3% |
+| Naver | - | 15/17 (88%) | 90.7% |
+
+### 수정 파일
+
+| 파일 | 변경 |
+|------|------|
+| `etl/collectors/youtube_collector.py` | `get_video_details()` 메서드 추가 |
+| `etl/place_mapper.py` | `resolve_area_ids_multi()` 추가 (multi-area 반환) |
+| `etl/load_youtube_trends.py` | 대규모 재작성: enrich_videos, match_area_ids, aggregate_by_date_area, spatial-first |
+| `etl/load_naver_trends.py` | 완전 재작성: match_area_ids, aggregate_items, spatial-first |
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-02-09 — M9-7 소셜 트렌드 상권/업종/H3 매핑 연동
+
+### 상태: DONE
+
+### 완료한 작업
+
+**M9-7: Social Trends 필터 연동**
+- [x] `backend/api/social.py` — `h3_index`, `area_id`, `cat_code` 필터 파라미터 추가
+  - h3_index → `bridge_area_h3_weight` 조인으로 해당 상권 area_ids 해석
+  - `CATEGORY_SOCIAL_MAP` 딕셔너리로 업종→소셜 키워드 매핑 (커피→카페, 한식→맛집, 제과→디저트 등)
+  - area 필터 결과 0건 시 전체 데이터로 폴백 + `is_fallback=true`
+  - 응답에 `filtered_area`, `filtered_category`, `is_fallback` 필드 추가
+  - 쿼리 로직을 `_query_trends()` 헬퍼로 추출 (폴백 시 재사용)
+- [x] `etl/load_youtube_trends.py` — `get_area_mapping()` 개선
+  - `real_name` 컬럼 추가 조회 + 파트 분리 매핑
+  - 랜드마크 수동 매핑 (연무장길, 대림창고, 서울숲, 헤이그라운드, 성수IT)
+  - "카페거리" 키워드 제거 — 성수동카페거리(14)와 서울숲카페거리(19) 중복 방지
+- [x] `etl/load_naver_trends.py` — 동일 개선 적용
+- [x] `frontend/src/store/mapStore.ts` — `fetchSocialTrends(h3Index?, catCode?)` 파라미터화
+  - `fetchHexDetail` 완료 후 소셜 자동 재조회
+  - `setCategory` 변경 시 소셜 재조회
+  - `toggleSocial` 시 현재 hex/category 컨텍스트 전달
+- [x] `frontend/src/types/social.ts` — `filtered_area`, `filtered_category`, `is_fallback` 필드 추가
+- [x] `frontend/src/components/sidebar/SocialBuzzCard.tsx` — 필터 컨텍스트 뱃지 (상권명/업종명/폴백 상태)
+- [x] `frontend/src/components/sidebar/Sidebar.tsx` — `socialLoading` 추출 + 로딩 스켈레톤 표시
+
+### 수정 파일
+
+| 파일 | 변경 |
+|------|------|
+| `backend/api/social.py` | h3_index/area_id/cat_code 필터, CATEGORY_SOCIAL_MAP, _query_trends 추출, 폴백 로직, 응답 컨텍스트 필드 |
+| `etl/load_youtube_trends.py` | get_area_mapping: real_name + 랜드마크 매핑 |
+| `etl/load_naver_trends.py` | get_area_mapping: real_name + 랜드마크 매핑 |
+| `frontend/src/store/mapStore.ts` | fetchSocialTrends 파라미터화, 자동 재조회 3곳 |
+| `frontend/src/types/social.ts` | SocialTrendsResponse 3필드 추가 |
+| `frontend/src/components/sidebar/SocialBuzzCard.tsx` | 필터 컨텍스트 뱃지 UI |
+| `frontend/src/components/sidebar/Sidebar.tsx` | socialLoading 스켈레톤 |
+
+### 블로커
+
+- 없음
+
+### 다음 3개 액션
+
+1. **ETL 재수집**: 기존 데이터 삭제 → YouTube/Naver 재수집으로 매핑률 확인 (8% → 30%+ 목표)
+2. **API 검증**: `GET /api/social/trends?h3_index=...` , `?cat_code=CS100010`, 복합 필터, 폴백 동작 확인
+3. **프론트엔드 E2E**: 헥스 클릭 시 SocialBuzzCard 필터 뱃지 변경, 업종 전환 시 카드 내용 변경 확인
+
+---
+
+## 2026-02-09 — M9 SNS Module 전체 완료
+
+### 상태: M9 COMPLETE (M9-1 ~ M9-6)
+
+### 완료한 작업
+
+**M9-1: DB Migration**
+- [x] `backend/migrations/005_sns_module.sql` 작성
+  - fact_social_trend_daily: 소셜 트렌드 일별 집계 (YouTube/Naver Blog/Cafe)
+  - social_module_config: 모듈 ON/OFF 설정 (기본값 enabled=false)
+  - DEC-021: area_id nullable FK (best-effort 상권 매핑, NULL=성수동 전체)
+  - 기본 검색 키워드 5개 프리셋 포함
+
+**M9-2: YouTube Collector + Loader**
+- [x] `etl/collectors/youtube_collector.py` — YouTube Data API v3 search.list, 페이징, quota exceeded 에러 처리
+- [x] `etl/load_youtube_trends.py` — 키워드별 수집, 일별 집계, best-effort 상권매핑, 간이 감성분석, upsert
+
+**M9-3: Naver Collector + Loader**
+- [x] `etl/collectors/naver_collector.py` — Naver Search API (Blog+Cafe), 페이징, rate limit 처리
+- [x] `etl/load_naver_trends.py` — Blog/Cafe 분리 처리, HTML 태그 제거, 일별 집계, best-effort 상권매핑, upsert
+
+**M9-4: Social Agent (LangGraph)**
+- [x] `backend/agents/social_agent.py` — 모듈 ON/OFF 분기, 트렌드 집계 쿼리 (버즈/감성/소스별/키워드/에비던스/일별추이)
+- [x] `backend/agents/graph.py` — social_agent 노드 추가, 라우팅: supervisor→sql→social→insight
+- [x] `backend/agents/insight_agent.py` — social_result 주입 (ON: 버즈+감성+키워드+에비던스, OFF: 비활성 노트)
+- [x] `backend/agents/sql_agent.py` — fact_social_trend_daily, social_module_config ALLOWED_TABLES 및 스키마 추가
+
+**M9-5: Social API Endpoints**
+- [x] `backend/api/social.py` — GET /api/social/config, GET /api/social/trends (days/source/keyword 필터)
+- [x] `backend/main.py` — social_router 등록
+
+**M9-6: Frontend SNS UI**
+- [x] `frontend/src/types/social.ts` — TypeScript 인터페이스 (SocialTrendsResponse, SocialConfigResponse 등)
+- [x] `frontend/src/store/mapStore.ts` — socialEnabled, socialConfig, socialData, socialLoading 상태 + 액션
+- [x] `frontend/src/components/sidebar/SocialBuzzCard.tsx` — 버즈량, 감성바, 소스별 배지, TOP 키워드, 에비던스 스니펫, 일별 추이 미니차트
+- [x] `frontend/src/components/sidebar/Sidebar.tsx` — SocialBuzzCard 조건부 렌더링
+- [x] `frontend/src/components/filters/FilterPanel.tsx` — 소셜 트렌드 ON/OFF 토글 + fetchSocialConfig 초기 호출
+
+### 수정 파일
+
+| 파일 | 변경 |
+|------|------|
+| `backend/migrations/005_sns_module.sql` | 신규 — SNS 모듈 테이블 2개 |
+| `etl/collectors/youtube_collector.py` | 신규 — YouTube Data API v3 래퍼 |
+| `etl/load_youtube_trends.py` | 신규 — YouTube 트렌드 로더 |
+| `etl/collectors/naver_collector.py` | 신규 — Naver Search API 래퍼 |
+| `etl/load_naver_trends.py` | 신규 — Naver 트렌드 로더 |
+| `backend/agents/social_agent.py` | 신규 — Social Agent LangGraph 노드 |
+| `backend/agents/graph.py` | 수정 — social_agent 노드+라우팅 추가 |
+| `backend/agents/insight_agent.py` | 수정 — social_result 프롬프트 주입 |
+| `backend/agents/sql_agent.py` | 수정 — SNS 테이블 스키마+ALLOWED_TABLES |
+| `backend/api/social.py` | 신규 — Social API 2개 엔드포인트 |
+| `backend/main.py` | 수정 — social_router 등록 |
+| `frontend/src/types/social.ts` | 신규 — SNS 타입 정의 |
+| `frontend/src/store/mapStore.ts` | 수정 — social 상태+액션 추가 |
+| `frontend/src/components/sidebar/SocialBuzzCard.tsx` | 신규 — 소셜 버즈 카드 |
+| `frontend/src/components/sidebar/Sidebar.tsx` | 수정 — SocialBuzzCard import+렌더링 |
+| `frontend/src/components/filters/FilterPanel.tsx` | 수정 — 소셜 토글+fetchSocialConfig |
+
+### 블로커
+
+- 없음
+
+### 다음 3개 액션
+
+1. **M9 실행**: DB에 migration 적용 (`psql -f 005_sns_module.sql`)
+2. **SNS 수집 테스트**: YOUTUBE_API_KEY + NAVER_CLIENT_ID 설정 후 ETL 실행
+3. **E2E 검증**: social_module_config enabled=true → FilterPanel 토글 → SocialBuzzCard 표시 확인
+
+---
+
+## 2026-02-08 — M8 비교 업종 스코프 토글
+
+### 상태: DONE
+
+### 완료한 작업
+
+- [x] 비교 모드 업종 기준 토글 추가 (전체/선택 업종)
+- [x] 업종 변경 시 비교 데이터 자동 갱신
+
+### 수정 파일
+
+| 파일 | 변경 |
+|------|------|
+| `frontend/src/store/mapStore.ts` | compareCategoryMode 상태 + 비교 재조회 로직 추가 |
+| `frontend/src/components/filters/FilterPanel.tsx` | 비교 업종 기준 토글 UI 추가 |
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-02-08 — 지도 타일 폴백 스타일 추가
+
+### 상태: DONE
+
+### 완료한 작업
+
+- [x] Mapbox 토큰 미설정 시 CARTO 타일 스타일로 폴백
+
+### 수정 파일
+
+| 파일 | 변경 |
+|------|------|
+| `frontend/src/components/map/HexMap.tsx` | mapStyle 폴백 로직 추가 |
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-02-08 — 인구통계 막대 가독성 보정
+
+### 상태: DONE
+
+### 완료한 작업
+
+- [x] 인구통계 막대 그래프 채움/배경 대비 강화
+- [x] 최소 막대 높이 보장
+
+### 수정 파일
+
+| 파일 | 변경 |
+|------|------|
+| `frontend/src/components/sidebar/DemoCard.tsx` | 막대 채움/배경 대비 + 최소 높이 보정 |
+
+### 블로커
+
+- 없음
+
+---
+
 ---
 
 ## 2026-01-31 — M0 Repo/Infra 완료
@@ -1219,3 +1455,560 @@ Q: "매출 숫자만 알려줘"
 
 - M5 (점포 수 기반 H3 Weight) 불필요로 판단하여 삭제
 - 관련 코드 및 마이그레이션 파일 제거됨
+
+---
+
+## 2026-02-07 — M6-1 DB Migration 완료
+
+### 상태: M6-1 DONE
+
+### 완료한 작업
+
+- [x] M6-1: `fact_facility_area_qtr` 테이블 생성
+  - `backend/migrations/004_s3_facility.sql` — DDL + 인덱스 + COMMENT
+  - PK: `(area_id, qtr, facility_type)`
+  - FK: `area_id → dim_area(area_id)`
+  - 인덱스: `(area_id, qtr)` 복합
+
+### DoD 검증
+
+```
+CREATE TABLE 성공 ✓
+PK/FK 제약조건 정상 (무효 area_id 거부 확인) ✓
+INSERT/SELECT/DELETE 정상 동작 ✓
+```
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-02-07 — M6-2 D8 집객시설 ETL 완료
+
+### 상태: M6-2 DONE
+
+### 완료한 작업
+
+- [x] `etl/collectors/seoul_api_collector.py` — `D8_FACILITY: VwsmTrdarFcltyQq` 추가
+- [x] `etl/load_facility_api.py` — D8 집객시설 ETL (narrow/EAV 포맷)
+- [x] API 서비스명 탐색: 원래 계획 `VwsmTrdarHitterIndQq`(OA-15581, 배후지)는 ERROR-500 → `VwsmTrdarFcltyQq`(OA-15580, 상권) 사용 (DEC-018)
+- [x] ETL 버그 수정: API가 분기 파라미터 무시 → 전체 데이터 1회 fetch + `STDR_YYQU_CD` 사용
+
+### DoD 검증
+
+```
+fact_facility_area_qtr: 6,800 rows ✓
+분기 커버리지: 20개 분기 (2020Q4 ~ 2025Q3) ✓
+상권: 17개 성수동 상권 ✓
+시설 유형: 20종 ✓
+Top 시설: 관광시설(5,600), 버스정류장(1,400), 약국(600), 은행(500)
+```
+
+### 실행 방법
+
+```bash
+docker compose run --rm --entrypoint python etl -m etl.load_facility_api
+```
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-02-07 — M6-3, M6-4 완료
+
+### 상태: M6-3, M6-4 DONE
+
+### 완료한 작업
+
+- [x] M6-3: Hexagons API 인구통계 필터 — 이미 기존 코드에 구현됨 (target_gender, target_age, mode 파라미터 + popup mode flow_by_demo JSONB 추출)
+- [x] M6-4: Hexagon Detail 확장 (시설 + 인구통계 + 시간대 카드)
+  - `backend/api/schemas.py` — FacilityItem, FacilityCard, DemoGenderRatio, DemoAgeItem, DemoCard, TimeSlotItem, TimeSlotRecommendation 모델 추가
+  - `backend/api/schemas.py` — HexagonDetailResponse에 facility, demo, time_slot 필드 추가
+  - `backend/api/map.py` — `_build_facility_card()`: fact_facility_area_qtr 쿼리 + 시설 유형별 집계
+  - `backend/api/map.py` — `_build_demo_card()`: flow_by_demo JSONB → 성별/연령대 분포 분석
+  - `backend/api/map.py` — `_build_time_slot()`: flow_by_hour (시간대 범위) + flow_by_weekday → 피크 요일 분석
+  - `backend/api/map.py` — FACILITY_LABELS 매핑 (20종 시설 한글 라벨)
+
+### DoD 검증
+
+```
+# 서울숲 카페거리 (8a30e1c1664ffff)
+facility: total=1, top=['관광시설'] ✓
+demo: M=46.3%/F=53.7%, peak_age=30, peak_gender=여성 ✓
+time_slot: peak_weekday=목 ✓
+
+# 성수동 카페거리 (8a30e1c12ab7fff)
+facility: total=9 (관광시설5, 버스정류장3, 은행1) ✓
+demo: M=47.7%/F=52.3%, peak_age=20, peak_gender=여성 ✓
+time_slot: peak_weekday=목 ✓
+```
+
+### 참고사항
+
+- flow_by_hour 시간대별 데이터가 모두 null (Seoul API D5에서 시간대 유동인구 미제공)
+  - 시간대 추천은 flow_by_weekday 기반 피크 요일만 제공
+  - 향후 D5 데이터 갱신 시 시간대 슬롯별 비율도 자동 반영되도록 설계
+- FacilityCard, DemoCard, TimeSlotRecommendation은 Optional 필드 (데이터 없으면 null 반환)
+
+### 수정 파일
+
+| 파일 | 변경 |
+|------|------|
+| `backend/api/schemas.py` | FacilityCard, DemoCard, TimeSlotRecommendation 등 7개 모델 추가, HexagonDetailResponse 확장 |
+| `backend/api/map.py` | `_build_facility_card`, `_build_demo_card`, `_build_time_slot` 헬퍼 추가, hexagon detail에 3개 카드 통합 |
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-02-07 — M6-5 SQL Agent 프롬프트 업데이트 완료
+
+### 상태: M6-5 DONE (M6 COMPLETE)
+
+### 완료한 작업
+
+- [x] M6-5: SQL Agent 프롬프트 업데이트
+  - `ALLOWED_TABLES`에 `fact_facility_area_qtr` 추가
+  - `SQL_SYSTEM_PROMPT`에 추가:
+    - `flow_by_demo` JSONB 구조 및 PostgreSQL `->>` 추출 패턴 (성별/연령대)
+    - `flow_by_weekday` JSONB 구조 및 요일별 추출 예제
+    - `flow_by_hour` JSONB 구조 (시간대별)
+    - `fact_facility_area_qtr` 스키마 (narrow/EAV 포맷)
+    - 시설 유형 코드 20종 매핑 (VIATR_FCLTY→관광시설, SUBWAY_STATN→지하철역 등)
+    - 인구통계 쿼리 예제: "20대 여성 유동인구 Top3"
+    - 시설 쿼리 예제: "지하철역/버스정류장 가장 많은 상권"
+    - Latest Quarter: Facility 20253 추가
+
+### 수정 파일
+
+| 파일 | 변경 |
+|------|------|
+| `backend/agents/sql_agent.py` | ALLOWED_TABLES + SQL_SYSTEM_PROMPT 확장 (인구통계 JSONB, 시설 테이블, 예제 쿼리) |
+
+### DoD 검증
+
+```
+ALLOWED_TABLES에 fact_facility_area_qtr 포함 ✓
+flow_by_demo JSONB 추출 패턴 (->>'male', ->>'age_20' 등) ✓
+fact_facility_area_qtr narrow/EAV 쿼리 패턴 ✓
+시설 유형 코드 20종 매핑 ✓
+Latest Quarters에 Facility 추가 ✓
+```
+
+### 블로커
+
+- 없음
+
+---
+
+## 전체 마일스톤 현황
+
+| 마일스톤 | 상태 | 완료 티켓 | 남은 티켓 |
+|---------|------|----------|----------|
+| M0 Repo/Infra | DONE | M0-1~M0-4 | M0-5 (P1, 선택) |
+| M1 Data Layer | DONE | M1-1~M1-8 | 없음 |
+| M2 API Layer | DONE | M2-1~M2-4 | 없음 |
+| M3 UI Layer | DONE | M3-1~M3-5 | 없음 |
+| M4 Eval/Logging | DONE | M4-1~M4-3 | 없음 |
+| M5 Store H3 Weight | DELETED | - | - |
+| M6 S3 Data+Backend | DONE | M6-1~M6-5 | 없음 |
+| M7 S3 Frontend | IN PROGRESS | M7-1~M7-3 | M7-4~M7-5 |
+| M8 S4 비교 | PLANNED | - | M8-1~M8-3 |
+| M9 SNS Module | PLANNED | - | M9-1~M9-6 |
+
+---
+
+## 2026-02-07 — M6 버그 수정 (JSONB 캐스팅 + Insight 응답 유형)
+
+### 상태: BUGFIX COMPLETE
+
+### 발견된 이슈
+
+| # | 이슈 | 원인 |
+|---|------|------|
+| 1 | 인구통계 SQL 쿼리 실패 (row_count: 0) | `flow_by_demo` JSONB 값이 `"191521.0"` (float 문자열)인데 `::int` 캐스팅 시 PostgreSQL 에러 |
+| 2 | 단순 조회에도 모든 카드(추천/리스크) 반환 | 질문 유형 분류 없이 일괄 구조화 응답 생성 |
+
+### 수정 내용
+
+1. **sql_agent.py — JSONB 캐스팅 수정**
+   ```sql
+   -- 수정 전 (실패)
+   SELECT (flow_by_demo->>'female')::int  -- ERROR: invalid input syntax for type integer: "191521.0"
+   
+   -- 수정 후 (성공)
+   SELECT (flow_by_demo->>'female')::numeric
+   ```
+   - Line 127-155: 모든 JSONB 추출 예제에서 `::int` → `::numeric` 변경
+   - `flow_by_demo`, `flow_by_weekday`, `flow_by_hour` 모두 수정
+
+2. **insight_agent.py — 질문 유형 분류 로직 추가**
+   - 5가지 응답 유형 분류:
+     - `data_lookup`: summary + data_table + evidence (단순 조회)
+     - `recommendation`: summary + recommendations + evidence + risks + checklist (창업 추천)
+     - `risk_analysis`: summary + risks + evidence + action_items (리스크 진단)
+     - `comparison`: summary + comparison + evidence (비교 분석)
+     - `general`: summary + evidence (일반)
+   - `response_type` 필드 추가 → 프론트엔드 조건부 렌더링 가능
+
+### 수정 파일
+
+| 파일 | 변경 |
+|------|------|
+| `backend/agents/sql_agent.py` | JSONB 캐스팅 `::int` → `::numeric` (4개소) |
+| `backend/agents/insight_agent.py` | 질문 유형 분류 + response_type 필드 추가 |
+
+### 테스트 결과
+
+```bash
+# 수정 전
+"20대 여성 유동인구 Top3" → row_count: 0 (SQL 에러)
+
+# 수정 후
+"20대 여성 유동인구 Top3" → row_count: 3, response_type: "data_lookup" ✓
+"지하철역/버스정류장 Top5" → row_count: 5, 시설 집계 정상 ✓
+"남성 비율 높은 상권" → row_count: 5, 성별 비율 계산 정상 ✓
+```
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-02-07 — M7-1, M7-2, M7-3 완료
+
+### 상태: M7-1~M7-3 DONE
+
+### 완료한 작업
+
+- [x] M7-1: Zustand Store 확장 — 이전 세션에서 이미 구현됨 (mode, targetGender, targetAge, setMode, setTargetGender, setTargetAge)
+- [x] M7-2: TypeScript 타입 추가
+  - `frontend/src/types/map.ts` — FacilityItem, FacilityCard, DemoGenderRatio, DemoAgeItem, DemoCard, TimeSlotItem, TimeSlotRecommendation 인터페이스 추가
+  - HexagonDetailResponse에 facility, demo, time_slot 필드 추가
+- [x] M7-3: 팝업 모드 필터 UI
+  - `frontend/src/components/filters/PopupModePanel.tsx` — **신규** 컴포넌트
+    - Default/Popup 모드 토글 버튼
+    - 팝업 모드 시 성별 필터 (전체/남성/여성)
+    - 팝업 모드 시 연령대 필터 (전체/10대~60+)
+    - 이벤트 트래킹 (FILTER_APPLY)
+  - `frontend/src/components/filters/FilterPanel.tsx` — PopupModePanel 통합
+  - `frontend/src/components/map/HexMap.tsx` — hexagons API 호출에 mode, target_gender, target_age 파라미터 전달
+
+### DoD 검증
+
+```
+npm run build → 성공 (타입 에러 0개) ✓
+PopupModePanel 렌더링 (모드 토글, 성별/연령 필터) ✓
+popup 모드 토글 → store 상태 변경 ✓
+필터 변경 → hexagons API에 mode/target_gender/target_age 파라미터 전달 ✓
+hexDetail API에도 popup 파라미터 전달 (기존 M7-1에서 구현) ✓
+```
+
+### 수정 파일
+
+| 파일 | 변경 |
+|------|------|
+| `frontend/src/types/map.ts` | FacilityCard, DemoCard, TimeSlotRecommendation 등 7개 인터페이스 + HexagonDetailResponse 확장 |
+| `frontend/src/components/filters/PopupModePanel.tsx` | **신규** — 팝업 모드 필터 패널 |
+| `frontend/src/components/filters/FilterPanel.tsx` | PopupModePanel import + 통합 |
+| `frontend/src/components/map/HexMap.tsx` | mode/targetGender/targetAge store 연동 + hexagons API 파라미터 전달 |
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-02-07 — M7-4, M7-5 완료 (M7 COMPLETE)
+
+### 상태: M7-4, M7-5 DONE (M7 COMPLETE)
+
+### 완료한 작업
+
+- [x] M7-4: 사이드바 카드 3개 추가
+  - `frontend/src/components/sidebar/FacilityCard.tsx` — **신규** 집객시설 카드 (시설 유형별 목록, 총 시설 수)
+  - `frontend/src/components/sidebar/DemoCard.tsx` — **신규** 인구통계 카드 (성별 비율 바, 연령대 분포 차트, 주 고객)
+  - `frontend/src/components/sidebar/TimeSlotCard.tsx` — **신규** 시간대 추천 카드 (피크 요일, 시간대별 유동 비율)
+  - `frontend/src/components/sidebar/Sidebar.tsx` — 3개 카드 통합 (데이터 있으면 표시)
+
+- [x] M7-5: HexMap 팝업 모드 시각화
+  - `frontend/src/types/map.ts` — HexagonSummary에 target_flow, target_flow_ratio 필드 추가
+  - `frontend/src/components/map/HexMap.tsx` — popup 모드 시각화:
+    - 색상: target_flow_ratio 기반 파랑→보라→마젠타 스케일
+    - 높이: target_flow 기반 elevation
+    - 범례: 팝업 모드 시 "타겟 인구 비율" 범례로 전환
+    - 툴팁: 타겟 유동인구, 전체 유동인구, 비율 표시
+
+### DoD 검증
+
+```
+npm run build → 성공 (타입 에러 0개) ✓
+FacilityCard 렌더링 (시설 목록) ✓
+DemoCard 렌더링 (성별 비율 + 연령대 차트) ✓
+TimeSlotCard 렌더링 (피크 요일) ✓
+popup 모드 → 파랑→보라 색상 스케일 ✓
+popup 모드 → target_flow 기반 elevation ✓
+popup 모드 → 범례 전환 ✓
+popup 모드 → 툴팁 타겟 유동 표시 ✓
+```
+
+### 수정 파일
+
+| 파일 | 변경 |
+|------|------|
+| `frontend/src/types/map.ts` | HexagonSummary에 target_flow, target_flow_ratio 추가 |
+| `frontend/src/components/sidebar/FacilityCard.tsx` | **신규** — 집객시설 카드 |
+| `frontend/src/components/sidebar/DemoCard.tsx` | **신규** — 인구통계 카드 |
+| `frontend/src/components/sidebar/TimeSlotCard.tsx` | **신규** — 시간대 추천 카드 |
+| `frontend/src/components/sidebar/Sidebar.tsx` | 3개 카드 import + 통합 |
+| `frontend/src/components/map/HexMap.tsx` | popup 색상/높이/범례/툴팁 + getPopupColorScale 함수 |
+
+### 블로커
+
+- 없음
+
+---
+
+## 전체 마일스톤 현황
+
+| 마일스톤 | 상태 | 완료 티켓 | 남은 티켓 |
+|---------|------|----------|----------|
+| M0 Repo/Infra | DONE | M0-1~M0-4 | M0-5 (P1, 선택) |
+| M1 Data Layer | DONE | M1-1~M1-8 | 없음 |
+| M2 API Layer | DONE | M2-1~M2-4 | 없음 |
+| M3 UI Layer | DONE | M3-1~M3-5 | 없음 |
+| M4 Eval/Logging | DONE | M4-1~M4-3 | 없음 |
+| M5 Store H3 Weight | DELETED | - | - |
+| M6 S3 Data+Backend | DONE | M6-1~M6-5 | 없음 |
+| M7 S3 Frontend | DONE | M7-1~M7-5 | 없음 |
+| M8 S4 비교 | DONE | M8-1~M8-3 | 없음 |
+| M9 SNS Module | PLANNED | - | M9-1~M9-6 |
+
+## 다음 3개 액션
+
+1. **M9-1 DB Migration**: SNS 테이블 생성 (fact_social_trend_daily, social_module_config)
+2. **M9-2 YouTube Collector**: YouTube Data API v3 ETL
+3. **M9-3 Naver Collector**: Naver Search API ETL
+
+---
+
+## 2026-02-08 — M8 S4 분기 비교 완료 (M8 COMPLETE)
+
+### 상태: M8-1, M8-2, M8-3 DONE
+
+### 완료한 작업
+
+- [x] M8-1: 비교 API 엔드포인트
+  - `backend/api/schemas.py` — 5개 Pydantic 모델 추가 (ComparisonRequest, ComparisonMetricSnapshot, ComparisonChange, ComparisonBreakdown, ComparisonResponse)
+  - `backend/api/map.py` — POST /api/map/compare 엔드포인트
+    - H3 유효성 + qtr_before != qtr_after 검증
+    - bridge_area_h3_weight + dim_area 조인으로 area_ids/weights 해석
+    - fact_sales/flow/store 두 분기 데이터 한번에 fetch (qtr IN)
+    - weight 기반 집계 → before/after 스냅샷 빌드
+    - _safe_div로 변화율 계산
+    - flow JSONB breakdown 추출 (before/after 각각)
+    - 경고 생성 (매출/유동 -10% 이상 감소, 폐업률 >15%)
+
+- [x] M8-2: SQL Agent 비교 쿼리 패턴
+  - `backend/agents/sql_agent.py` — SQL_SYSTEM_PROMPT에 추가:
+    - 비교 키워드: "대비", "비교", "변화", "전분기", "전년동기", "증감"
+    - WITH before_q AS / after_q AS CTE 패턴
+    - 예제 1: 단일 지표 비교 (매출 변화율)
+    - 예제 2: 복합 비교 (매출 + 유동인구)
+
+- [x] M8-3: Frontend 비교 모드
+  - `frontend/src/types/map.ts` — 4개 TypeScript 인터페이스 추가
+  - `frontend/src/store/mapStore.ts` — 비교 상태 (comparisonMode, compareQtrBefore/After, comparisonData, comparisonLoading) + 액션 (setComparisonMode, setCompareQtrBefore/After, fetchComparison). 분기 변경 시 auto-refetch
+  - `frontend/src/components/filters/FilterPanel.tsx` — 비교 모드 ON/OFF 토글 (violet), Before/After 분기 Select
+  - `frontend/src/components/sidebar/ComparisonCard.tsx` — **신규** 비교 카드
+    - 분기 라벨 Badge (Before=blue, After=violet)
+    - 3-column 변화율 그리드 (매출/유동/점포)
+    - Before → After 상세 비교 행 (매출/유동/점포/개업/폐업)
+    - Recharts 듀얼 BarChart (before=blue, after=violet)
+    - 경고 목록 (WarningList 패턴)
+  - `frontend/src/components/sidebar/Sidebar.tsx` — comparisonMode 분기 렌더링 (ComparisonCard vs 기존 카드)
+  - `frontend/src/components/map/HexMap.tsx` — 클릭 핸들러 분기 (comparisonMode ? fetchComparison : fetchHexDetail)
+
+### DoD 검증
+
+```
+npm run build → 성공 (타입 에러 0개) ✓
+python3 ast.parse → 모든 백엔드 파일 파싱 성공 ✓
+비교 모드 토글 (violet 버튼) ✓
+Before/After 분기 Select 표시 ✓
+ComparisonCard 듀얼 바 차트 ✓
+변화율 3-column 그리드 ✓
+상세 비교 행 (매출/유동/점포/개업/폐업) ✓
+경고 목록 ✓
+Sidebar 비교 모드 분기 렌더링 ✓
+HexMap 클릭 핸들러 분기 ✓
+```
+
+### 수정 파일
+
+| 파일 | 변경 |
+|------|------|
+| `backend/api/schemas.py` | 5개 Pydantic 모델 추가 |
+| `backend/api/map.py` | POST /api/map/compare 엔드포인트 추가 |
+| `backend/agents/sql_agent.py` | 비교 CTE 패턴 + 예제 2개 추가 |
+| `frontend/src/types/map.ts` | 4개 TS 인터페이스 추가 |
+| `frontend/src/store/mapStore.ts` | 비교 상태 + 액션 추가 |
+| `frontend/src/components/filters/FilterPanel.tsx` | 비교 모드 토글 + Before/After Select |
+| `frontend/src/components/sidebar/ComparisonCard.tsx` | **신규** — 비교 카드 |
+| `frontend/src/components/sidebar/Sidebar.tsx` | 비교 모드 분기 렌더링 |
+| `frontend/src/components/map/HexMap.tsx` | 클릭 핸들러 분기 |
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-02-09 — M9-11: 주소/상호 정제 기반 Kakao 지오코딩 보강
+
+### 상태: DONE
+
+### 배경
+
+- 유튜브 스니펫에 상호/주소가 포함되어도 매칭이 누락되는 사례가 존재
+- 주소 문자열을 직접 지오코딩하면 매핑 정확도를 높일 수 있음
+
+### 완료한 작업
+
+- [x] ETL: 주소 패턴 추출 → Kakao 주소검색 → 공간조인 경로 추가
+- [x] ETL: 상호명 정규화(지점/점/성수점 제거) 후 지오코딩 재시도
+
+### 수정 파일
+
+| 파일 | 변경 |
+|------|------|
+| `etl/place_mapper.py` | 주소 추출 + 주소 지오코딩 + 상호 정규화 |
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-02-09 — M9-10: YouTube 해시태그 기반 장소 단서 보강
+
+### 상태: DONE
+
+### 배경
+
+- YouTube 설명에 상호/주소가 부족한 경우가 많아 매핑률 개선이 제한됨
+- 해시태그에 상호/장소명이 포함되는 패턴이 존재
+
+### 완료한 작업
+
+- [x] YouTube ETL: 해시태그 추출 후 키워드 매칭/LLM 장소 추출 입력에 포함
+- [x] 스니펫 저장 시 해시태그 포함하여 증거 텍스트 보강
+
+### 수정 파일
+
+| 파일 | 변경 |
+|------|------|
+| `etl/load_youtube_trends.py` | 해시태그 추출 + 매칭/LLM 입력 보강 |
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-02-09 — M9-9: LLM + Kakao Local 상권 매핑 보강
+
+### 상태: DONE
+
+### 배경
+
+- 상권별 소셜 트렌드 매핑률이 낮아 폴백 표시가 잦음
+- 상권명 표기 다양성으로 키워드 매핑 실패 증가
+
+### 완료한 작업
+
+- [x] ETL: `etl/place_mapper.py` 신규 — Gemini Flash 장소 추출 + Kakao Local 지오코딩 + `dim_area` 공간조인
+- [x] ETL: `load_youtube_trends.py`, `load_naver_trends.py` — 키워드 미매칭 시 LLM+Kakao 매핑 보강 경로 추가
+- [x] Env: `.env.example`에 `KAKAO_REST_API_KEY` 추가
+
+### 수정 파일
+
+| 파일 | 변경 |
+|------|------|
+| `etl/place_mapper.py` | **신규** — LLM + Kakao Local 기반 area_id 보강 유틸 |
+| `etl/load_youtube_trends.py` | LLM+Kakao 매핑 경로 추가 |
+| `etl/load_naver_trends.py` | LLM+Kakao 매핑 경로 추가 |
+| `.env.example` | `KAKAO_REST_API_KEY` 추가 |
+
+### 블로커
+
+- 없음
+
+---
+
+## 2026-02-09 — M9-8: Gemini Flash 업종 태깅 + API matched_categories 필터
+
+### 상태: DONE
+
+### 배경
+
+- 업종(cat_code) 선택 시 소셜 에비던스가 동일한 결과만 표시되는 문제
+- 키워드 기반 필터링(CATEGORY_SOCIAL_MAP/CATEGORY_EVIDENCE_HINTS)으로는 정확도 부족
+- 사용자 요청: "단순 키워드 기반으로 하지말고 Gemini Flash 모델로 판단하게 해보는건 어떄?"
+
+### 완료한 작업
+
+- [x] ETL: `etl/category_tagger.py` 생성 — Gemini Flash 2.0 배치 태깅 유틸리티
+- [x] ETL: `load_youtube_trends.py`, `load_naver_trends.py` — tag_daily_snippets() 호출 + matched_categories upsert
+- [x] DB: `matched_categories` JSONB 컬럼 추가 (fact_social_trend_daily)
+- [x] Backend: `social.py` — CATEGORY_SOCIAL_MAP/CATEGORY_EVIDENCE_HINTS 제거, SERVICE_TO_SOCIAL_CATEGORY + matched_categories @> 필터로 교체
+- [x] Backend: 스니펫별 categories 필드 기반 필터링 (Gemini 태깅 결과 활용)
+- [x] ETL 재수집: 기존 데이터 삭제 → Naver/YouTube 재수집 with Gemini tagging
+- [x] 매핑률: YouTube area 97.8%, Naver area 100%, Gemini tagged 94.6% (53/56)
+
+### 검증 결과
+
+```
+커피-음료 필터 → 카페/커피 관련 스니펫만 표시 ✓
+일식 필터 → 스시/돈까스/생선 관련 스니펫만 표시 ✓
+양식 필터 → 피자/브런치/유럽 관련 스니펫만 표시 ✓
+필터 없음 → 전체 1205 buzz, 10 snippets ✓
+```
+
+### 수정 파일
+
+| 파일 | 변경 |
+|------|------|
+| `etl/category_tagger.py` | **신규** — Gemini Flash 배치 카테고리 태거 |
+| `etl/load_youtube_trends.py` | tag_daily_snippets() + matched_categories upsert |
+| `etl/load_naver_trends.py` | 동일 변경 |
+| `backend/api/social.py` | SERVICE_TO_SOCIAL_CATEGORY + matched_categories JSONB 필터 |
+| `backend/requirements.txt` | google-generativeai==0.8.3 추가 |
+| `etl/requirements.txt` | google-generativeai==0.8.3 추가 |
+
+### 블로커
+
+- Gemini 429 rate limit (무료 tier) — 대량 태깅 시 일부 배치 실패 가능 (자동 폴백: 빈 배열)
+
+---
+
+## 전체 마일스톤 현황
+
+| 마일스톤 | 상태 | 완료 티켓 | 남은 티켓 |
+|---------|------|----------|----------|
+| M0 Repo/Infra | DONE | M0-1~M0-4 | M0-5 (P1, 선택) |
+| M1 Data Layer | DONE | M1-1~M1-8 | 없음 |
+| M2 API Layer | DONE | M2-1~M2-4 | 없음 |
+| M3 UI Layer | DONE | M3-1~M3-5 | 없음 |
+| M4 Eval/Logging | DONE | M4-1~M4-3 | 없음 |
+| M5 Store H3 Weight | DELETED | - | - |
+| M6 S3 Data+Backend | DONE | M6-1~M6-5 | 없음 |
+| M7 S3 Frontend | DONE | M7-1~M7-5 | 없음 |
+| M8 S4 비교 | DONE | M8-1~M8-3 | 없음 |
+| M9 SNS Module | DONE | M9-1~M9-8 | 없음 |

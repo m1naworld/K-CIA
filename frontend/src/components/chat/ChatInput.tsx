@@ -28,13 +28,13 @@ export function ChatInput() {
   );
 
   return (
-    <div className="flex items-end gap-2 border-t border-white/10 pt-3">
+    <div className="flex items-end gap-2 border-t border-slate-200 pt-3 dark:border-white/10">
       <textarea
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="질문을 입력하세요..."
-        className="max-h-24 min-h-[40px] flex-1 resize-none rounded-lg bg-gray-800 px-3 py-2 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        className="max-h-24 min-h-[40px] flex-1 resize-none rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:text-white dark:placeholder-white/40"
         disabled={isStreaming}
         rows={1}
       />

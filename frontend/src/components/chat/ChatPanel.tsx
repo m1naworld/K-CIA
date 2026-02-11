@@ -6,16 +6,21 @@ import { useChatStore } from "@/store/chatStore";
 import { ChatMessages } from "./ChatMessages";
 import { ChatInput } from "./ChatInput";
 
+import { useMapStore } from "@/store/mapStore";
+
 export default function ChatPanel() {
   const { isOpen, isExpanded, toggleOpen, toggleExpanded, clearMessages, messages } =
     useChatStore();
+  const { sidebarOpen } = useMapStore();
 
   // Floating button when closed
   if (!isOpen) {
     return (
       <Button
         onClick={toggleOpen}
-        className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-blue-600 shadow-lg hover:bg-blue-500"
+        className={`fixed bottom-6 z-50 h-14 w-14 rounded-full bg-blue-600 shadow-lg transition-all duration-300 hover:bg-blue-500 ${
+          sidebarOpen ? "right-[344px]" : "right-6"
+        }`}
         size="icon"
       >
         <MessageSquare className="h-6 w-6" />
@@ -29,11 +34,13 @@ export default function ChatPanel() {
 
   return (
     <div
-      className={`fixed bottom-6 right-6 z-50 ${panelWidth} ${panelHeight} flex flex-col rounded-xl border border-white/10 bg-gray-950 shadow-2xl`}
+      className={`fixed bottom-6 z-50 flex flex-col rounded-xl border border-slate-200 bg-white text-slate-900 shadow-2xl transition-all duration-300 dark:border-white/10 dark:bg-gray-950 dark:text-white ${panelWidth} ${panelHeight} ${
+        sidebarOpen ? "right-[344px]" : "right-6"
+      }`}
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-        <h3 className="flex items-center gap-2 text-sm font-medium text-white">
+      <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-white/10">
+        <h3 className="flex items-center gap-2 text-sm font-medium text-slate-900 dark:text-white">
           <MessageSquare className="h-4 w-4 text-blue-400" />
           AI 상권 컨설턴트
         </h3>
@@ -42,7 +49,7 @@ export default function ChatPanel() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7 text-white/50 hover:bg-white/10 hover:text-white"
+              className="h-7 w-7 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-white/50 dark:hover:bg-white/10 dark:hover:text-white"
               onClick={clearMessages}
               title="대화 초기화"
             >
@@ -52,7 +59,7 @@ export default function ChatPanel() {
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 text-white/50 hover:bg-white/10 hover:text-white"
+            className="h-7 w-7 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-white/50 dark:hover:bg-white/10 dark:hover:text-white"
             onClick={toggleExpanded}
             title={isExpanded ? "축소" : "확장"}
           >
@@ -65,7 +72,7 @@ export default function ChatPanel() {
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 text-white/50 hover:bg-white/10 hover:text-white"
+            className="h-7 w-7 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-white/50 dark:hover:bg-white/10 dark:hover:text-white"
             onClick={toggleOpen}
             title="닫기"
           >

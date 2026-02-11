@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+import json
+
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -10,7 +12,17 @@ import h3
 
 from db import get_db
 from api.schemas import (
+    ComparisonBreakdown,
+    ComparisonChange,
+    ComparisonMetricSnapshot,
+    ComparisonRequest,
+    ComparisonResponse,
     CompetitionCard,
+    DemoAgeItem,
+    DemoCard,
+    DemoGenderRatio,
+    FacilityCard,
+    FacilityItem,
     FlowCard,
     GrowthCard,
     HexagonDetailResponse,
@@ -19,6 +31,8 @@ from api.schemas import (
     RecommendationCard,
     RiskCard,
     SalesCard,
+    TimeSlotItem,
+    TimeSlotRecommendation,
     TrendData,
     TrendPoint,
 )
@@ -64,6 +78,204 @@ def _safe_div(a: float | None, b: float | None) -> float | None:
     if a is None or b is None or b == 0:
         return None
     return round((a - b) / b, 4)
+
+
+FACILITY_LABELS: dict[str, str] = {
+    "VIATR_FCLTY": "관광시설",
+    "PBLOFC": "관공서",
+    "BANK": "은행",
+    "GEHSPT": "종합병원",
+    "GNRL_HSPTL": "일반병원",
+    "PARMACY": "약국",
+    "KNDRGR": "유치원",
+    "ELESCH": "초등학교",
+    "MSKUL": "중학교",
+    "HGSCHL": "고등학교",
+    "UNIV": "대학교",
+    "DRTS": "백화점",
+    "SUPMK": "대형마트",
+    "THEAT": "극장",
+    "STAYNG_FCLTY": "숙박시설",
+    "ARPRT": "공항",
+    "RLROAD_STATN": "철도역",
+    "BUS_TRMINL": "버스터미널",
+    "SUBWAY_STATN": "지하철역",
+    "BUS_STTN": "버스정류장",
+}
+
+WEEKDAY_LABELS = ["월", "화", "수", "목", "금", "토", "일"]
+AGE_GROUPS = ["10", "20", "30", "40", "50", "60+"]
+
+
+def _build_facility_card(
+    db: Session, area_ids: list[int], qtr: str
+) -> FacilityCard | None:
+    """Build FacilityCard from fact_facility_area_qtr."""
+    rows = db.execute(
+        text("""
+            SELECT facility_type, SUM(facility_cnt) AS cnt
+            FROM fact_facility_area_qtr
+            WHERE area_id IN :aids AND qtr = :qtr
+            GROUP BY facility_type
+            ORDER BY cnt DESC
+        """),
+        {"aids": tuple(area_ids), "qtr": qtr},
+    ).fetchall()
+
+    if not rows:
+        return None
+
+    items = [
+        FacilityItem(
+            facility_type=r.facility_type,
+            label=FACILITY_LABELS.get(r.facility_type, r.facility_type),
+            count=int(r.cnt),
+        )
+        for r in rows
+        if int(r.cnt) > 0
+    ]
+    total = sum(i.count for i in items)
+    top_types = [i.label for i in items[:5]]
+
+    return FacilityCard(total_count=total, facilities=items, top_types=top_types)
+
+
+def _build_demo_card(flow_by_demo: dict | str | None, flow_total: float | None) -> DemoCard | None:
+    """Build DemoCard from flow_by_demo JSONB."""
+    if not flow_by_demo:
+        return None
+
+    demo = flow_by_demo
+    if isinstance(demo, str):
+        demo = json.loads(demo)
+    if not isinstance(demo, dict):
+        return None
+
+    total = float(flow_total) if flow_total else 0
+    if total <= 0:
+        return None
+
+    # Gender ratio
+    male_cnt = float(demo.get("male", 0))
+    female_cnt = float(demo.get("female", 0))
+    gender_total = male_cnt + female_cnt
+    gender = DemoGenderRatio(
+        male=round(male_cnt / gender_total, 4) if gender_total > 0 else None,
+        female=round(female_cnt / gender_total, 4) if gender_total > 0 else None,
+    )
+    peak_gender = "남성" if male_cnt >= female_cnt else "여성"
+
+    # Age distribution
+    age_items: list[DemoAgeItem] = []
+    age_keys = [
+        ("age_10", "10"), ("age_20", "20"), ("age_30", "30"),
+        ("age_40", "40"), ("age_50", "50"), ("age_60+", "60+"),
+    ]
+    age_total = sum(float(demo.get(k, 0)) for k, _ in age_keys)
+    peak_age = ("", 0.0)
+    for key, label in age_keys:
+        cnt = float(demo.get(key, 0))
+        ratio = round(cnt / age_total, 4) if age_total > 0 else 0
+        age_items.append(DemoAgeItem(age_group=label, ratio=ratio, count=cnt))
+        if cnt > peak_age[1]:
+            peak_age = (label, cnt)
+
+    return DemoCard(
+        gender=gender,
+        age_distribution=age_items,
+        peak_age_group=peak_age[0] if peak_age[0] else None,
+        peak_gender=peak_gender,
+    )
+
+
+def _build_time_slot(
+    flow_by_hour: dict | str | None,
+    flow_by_weekday: dict | str | None,
+) -> TimeSlotRecommendation | None:
+    """Build TimeSlotRecommendation from flow_by_hour/weekday JSONB.
+
+    flow_by_hour keys: "00_06", "06_11", "11_14", "14_17", "17_21", "21_24"
+    flow_by_weekday keys: "mon"~"sun"
+    """
+    # Parse weekday data
+    wd_map = {
+        "mon": "월", "tue": "화", "wed": "수", "thu": "목",
+        "fri": "금", "sat": "토", "sun": "일",
+    }
+    peak_weekday = None
+    if flow_by_weekday:
+        wd_data = flow_by_weekday
+        if isinstance(wd_data, str):
+            wd_data = json.loads(wd_data)
+        if isinstance(wd_data, dict):
+            wd_values: list[tuple[str, float]] = []
+            for k, v in wd_data.items():
+                try:
+                    if v is not None:
+                        wd_values.append((k, float(v)))
+                except (ValueError, TypeError):
+                    continue
+            if wd_values:
+                best_wd = max(wd_values, key=lambda x: x[1])
+                peak_weekday = wd_map.get(best_wd[0].lower(), best_wd[0])
+
+    # Parse hourly range data (keys: "00_06", "06_11", "11_14", "14_17", "17_21", "21_24")
+    slot_defs = [
+        ("00_06", "00~06", "심야·새벽"),
+        ("06_11", "06~11", "오전"),
+        ("11_14", "11~14", "점심"),
+        ("14_17", "14~17", "오후"),
+        ("17_21", "17~21", "저녁"),
+        ("21_24", "21~24", "야간"),
+    ]
+
+    recommendations: list[TimeSlotItem] = []
+    peak_hours: list[int] = []
+    off_peak_hours: list[int] = []
+
+    if flow_by_hour:
+        hour_data = flow_by_hour
+        if isinstance(hour_data, str):
+            hour_data = json.loads(hour_data)
+        if isinstance(hour_data, dict):
+            slot_flows: list[tuple[str, str, str, float]] = []
+            for key, label, desc in slot_defs:
+                val = hour_data.get(key)
+                if val is not None:
+                    try:
+                        slot_flows.append((key, label, desc, float(val)))
+                    except (ValueError, TypeError):
+                        pass
+
+            total_flow = sum(f for _, _, _, f in slot_flows)
+            if total_flow > 0:
+                for key, label, desc, flow in slot_flows:
+                    ratio = round(flow / total_flow, 4)
+                    recommendations.append(TimeSlotItem(hour_range=label, label=desc, flow_ratio=ratio))
+
+                # Sort by flow descending for peak/off-peak
+                sorted_slots = sorted(slot_flows, key=lambda x: x[3], reverse=True)
+                # Peak: midpoint hour of top 2 slots
+                for key, _, _, _ in sorted_slots[:2]:
+                    parts = key.split("_")
+                    mid = (int(parts[0]) + int(parts[1])) // 2
+                    peak_hours.append(mid)
+                # Off-peak: midpoint of bottom slot
+                for key, _, _, _ in sorted_slots[-1:]:
+                    parts = key.split("_")
+                    mid = (int(parts[0]) + int(parts[1])) // 2
+                    off_peak_hours.append(mid)
+
+    # If no hourly data, still return weekday info if available
+    if not recommendations and not peak_weekday:
+        return None
+
+    return TimeSlotRecommendation(
+        peak_hours=peak_hours,
+        peak_weekday=peak_weekday,
+        off_peak_hours=off_peak_hours,
+        recommendations=recommendations,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -180,6 +392,7 @@ def get_hexagons(
         cur = float(r.sales_amt) if r.sales_amt else None
         prev = float(r.prev_sales_amt) if r.prev_sales_amt else None
         sales_qoq = _safe_div(cur, prev)
+
         data.append(
             HexagonSummary(
                 h3_index=r.h3_index,
@@ -534,6 +747,22 @@ def get_hexagon_detail(
     # --- Trend Data (last 4 quarters) ---
     trend = _build_trend(db, area_ids, weights, sales_qtr, category)
 
+    # --- Facility Card (M6-4) ---
+    # Use the latest facility quarter available for these areas
+    fac_qtr_row = db.execute(
+        text("""
+            SELECT MAX(qtr) FROM fact_facility_area_qtr WHERE area_id IN :aids
+        """),
+        {"aids": tuple(area_ids)},
+    ).scalar()
+    facility_card = _build_facility_card(db, area_ids, fac_qtr_row) if fac_qtr_row else None
+
+    # --- Demo Card (M6-4) ---
+    demo_card = _build_demo_card(flow_by_demo, cur_flow)
+
+    # --- Time Slot Recommendation (M6-4) ---
+    time_slot_card = _build_time_slot(flow_by_hour, flow_by_weekday)
+
     return HexagonDetailResponse(
         h3_index=h3_index,
         lat=lat,
@@ -570,4 +799,196 @@ def get_hexagon_detail(
         ),
         recommendation=rec,
         trend=trend,
+        facility=facility_card,
+        demo=demo_card,
+        time_slot=time_slot_card,
+    )
+
+
+# ---------------------------------------------------------------------------
+# POST /api/map/compare
+# ---------------------------------------------------------------------------
+
+@router.post("/compare", response_model=ComparisonResponse)
+def compare_quarters(
+    req: ComparisonRequest = Body(...),
+    db: Session = Depends(get_db),
+):
+    """Compare two quarters for a given H3 hexagon."""
+    # Validate H3
+    if not h3.h3_is_valid(req.h3_index):
+        raise HTTPException(status_code=400, detail="Invalid H3 index")
+
+    if req.qtr_before == req.qtr_after:
+        raise HTTPException(status_code=400, detail="qtr_before and qtr_after must differ")
+
+    # Resolve area_ids from h3_index
+    area_rows = db.execute(
+        text("""
+            SELECT bw.area_id, da.area_name, bw.weight
+            FROM bridge_area_h3_weight bw
+            JOIN dim_area da ON da.area_id = bw.area_id
+            WHERE bw.h3_index = :h3 AND da.area_type = :area_type
+        """),
+        {"h3": req.h3_index, "area_type": req.area_type},
+    ).fetchall()
+
+    if not area_rows:
+        raise HTTPException(status_code=404, detail="H3 index not found in scope")
+
+    area_ids = [r.area_id for r in area_rows]
+    area_names = [r.area_name for r in area_rows]
+    weights = {r.area_id: float(r.weight) for r in area_rows}
+
+    # Category filter
+    cat_filter = ""
+    params: dict = {
+        "aids": tuple(area_ids),
+        "qtr_b": req.qtr_before,
+        "qtr_a": req.qtr_after,
+    }
+    if req.category:
+        cat_filter = "AND cat_id = (SELECT cat_id FROM dim_category WHERE service_code = :cat)"
+        params["cat"] = req.category
+
+    # Fetch sales for both quarters
+    sales_rows = db.execute(
+        text(f"""
+            SELECT area_id, qtr, SUM(sales_amt) AS sales_amt, SUM(sales_cnt) AS sales_cnt
+            FROM fact_sales_area_qtr
+            WHERE area_id IN :aids AND qtr IN (:qtr_b, :qtr_a) {cat_filter}
+            GROUP BY area_id, qtr
+        """),
+        params,
+    ).fetchall()
+
+    # Fetch flow for both quarters
+    flow_rows = db.execute(
+        text("""
+            SELECT area_id, qtr, flow_total, flow_by_hour, flow_by_weekday, flow_by_demo
+            FROM fact_flow_area_qtr
+            WHERE area_id IN :aids AND qtr IN (:qtr_b, :qtr_a)
+        """),
+        {"aids": tuple(area_ids), "qtr_b": req.qtr_before, "qtr_a": req.qtr_after},
+    ).fetchall()
+
+    # Fetch store for both quarters
+    store_rows = db.execute(
+        text(f"""
+            SELECT area_id, qtr, SUM(store_cnt) AS store_cnt,
+                   SUM(open_cnt) AS open_cnt, SUM(close_cnt) AS close_cnt
+            FROM fact_store_area_qtr
+            WHERE area_id IN :aids AND qtr IN (:qtr_b, :qtr_a) {cat_filter}
+            GROUP BY area_id, qtr
+        """),
+        params,
+    ).fetchall()
+
+    # Weight-based aggregation helper
+    def _wagg(rows: list, field: str, target_qtr: str) -> float | None:
+        total = 0.0
+        found = False
+        for r in rows:
+            if r.qtr == target_qtr:
+                val = getattr(r, field, None)
+                if val is not None:
+                    total += float(val) * weights.get(r.area_id, 1)
+                    found = True
+        return round(total, 2) if found else None
+
+    # Build before snapshot
+    b_sales = _wagg(sales_rows, "sales_amt", req.qtr_before)
+    b_sales_cnt = _wagg(sales_rows, "sales_cnt", req.qtr_before)
+    b_flow = _wagg(flow_rows, "flow_total", req.qtr_before)
+    b_store = _wagg(store_rows, "store_cnt", req.qtr_before)
+    b_open = _wagg(store_rows, "open_cnt", req.qtr_before)
+    b_close = _wagg(store_rows, "close_cnt", req.qtr_before)
+    b_close_rate = round(b_close / b_store, 4) if b_close and b_store and b_store > 0 else None
+
+    before = ComparisonMetricSnapshot(
+        sales_amt=b_sales,
+        sales_cnt=int(b_sales_cnt) if b_sales_cnt else None,
+        flow_total=b_flow,
+        store_cnt=int(b_store) if b_store else None,
+        open_cnt=int(b_open) if b_open else None,
+        close_cnt=int(b_close) if b_close else None,
+        close_rate=b_close_rate,
+    )
+
+    # Build after snapshot
+    a_sales = _wagg(sales_rows, "sales_amt", req.qtr_after)
+    a_sales_cnt = _wagg(sales_rows, "sales_cnt", req.qtr_after)
+    a_flow = _wagg(flow_rows, "flow_total", req.qtr_after)
+    a_store = _wagg(store_rows, "store_cnt", req.qtr_after)
+    a_open = _wagg(store_rows, "open_cnt", req.qtr_after)
+    a_close = _wagg(store_rows, "close_cnt", req.qtr_after)
+    a_close_rate = round(a_close / a_store, 4) if a_close and a_store and a_store > 0 else None
+
+    after = ComparisonMetricSnapshot(
+        sales_amt=a_sales,
+        sales_cnt=int(a_sales_cnt) if a_sales_cnt else None,
+        flow_total=a_flow,
+        store_cnt=int(a_store) if a_store else None,
+        open_cnt=int(a_open) if a_open else None,
+        close_cnt=int(a_close) if a_close else None,
+        close_rate=a_close_rate,
+    )
+
+    # Change rates
+    sales_cr = _safe_div(a_sales, b_sales)
+    flow_cr = _safe_div(a_flow, b_flow)
+    store_cr = _safe_div(a_store, b_store)
+
+    change = ComparisonChange(
+        sales_change_rate=sales_cr,
+        sales_diff=round(a_sales - b_sales, 2) if a_sales is not None and b_sales is not None else None,
+        flow_change_rate=flow_cr,
+        flow_diff=round(a_flow - b_flow, 2) if a_flow is not None and b_flow is not None else None,
+        store_change_rate=store_cr,
+        store_diff=round(a_store - b_store, 2) if a_store is not None and b_store is not None else None,
+    )
+
+    # Breakdowns (from first available area)
+    bkd_bh_before = bkd_bh_after = None
+    bkd_wd_before = bkd_wd_after = None
+    bkd_demo_before = bkd_demo_after = None
+    for r in flow_rows:
+        if r.qtr == req.qtr_before:
+            bkd_bh_before = bkd_bh_before or r.flow_by_hour
+            bkd_wd_before = bkd_wd_before or r.flow_by_weekday
+            bkd_demo_before = bkd_demo_before or r.flow_by_demo
+        elif r.qtr == req.qtr_after:
+            bkd_bh_after = bkd_bh_after or r.flow_by_hour
+            bkd_wd_after = bkd_wd_after or r.flow_by_weekday
+            bkd_demo_after = bkd_demo_after or r.flow_by_demo
+
+    breakdown = ComparisonBreakdown(
+        flow_by_weekday_before=bkd_wd_before,
+        flow_by_weekday_after=bkd_wd_after,
+        flow_by_hour_before=bkd_bh_before,
+        flow_by_hour_after=bkd_bh_after,
+        flow_by_demo_before=bkd_demo_before,
+        flow_by_demo_after=bkd_demo_after,
+    )
+
+    # Warnings
+    warnings: list[str] = []
+    if sales_cr is not None and sales_cr < -0.1:
+        warnings.append(f"매출 {abs(sales_cr * 100):.1f}% 감소")
+    if flow_cr is not None and flow_cr < -0.1:
+        warnings.append(f"유동인구 {abs(flow_cr * 100):.1f}% 감소")
+    if a_close_rate is not None and a_close_rate > 0.15:
+        warnings.append(f"폐업률 {a_close_rate * 100:.1f}% (After 분기)")
+
+    return ComparisonResponse(
+        h3_index=req.h3_index,
+        qtr_before=req.qtr_before,
+        qtr_after=req.qtr_after,
+        areas=area_names,
+        before=before,
+        after=after,
+        change=change,
+        breakdown=breakdown,
+        warnings=warnings,
+        data_asof=req.qtr_after,
     )
