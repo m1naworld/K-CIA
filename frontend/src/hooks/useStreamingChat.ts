@@ -31,12 +31,67 @@ export function useStreamingChat(): UseStreamingChatReturn {
     updateAssistantRoute,
     updateAssistantSql,
     updateAssistantInsight,
+    setAssistantCategoryInfo,
     completeAssistantMessage,
     setAssistantError,
     setStreaming,
   } = useChatStore();
 
-  const { category, quarter, hexDetail } = useMapStore();
+  const { category, quarter, hexDetail, selectedHex, categories, setCategory } =
+    useMapStore();
+
+  const inferCategory = useCallback(
+    (question: string) => {
+      if (!categories.length) return null;
+      const q = question.toLowerCase();
+      const keywordMap: Array<{ keywords: string[]; serviceName: string }> = [
+        {
+          keywords: ["디저트", "디저트카페", "베이커리", "베이커리카페"],
+          serviceName: "제과점",
+        },
+        {
+          keywords: [
+            "카페",
+            "카페거리",
+            "커피",
+            "커피전문점",
+            "커피 전문점",
+            "커피숍",
+            "커피샵",
+            "브런치",
+          ],
+          serviceName: "커피-음료",
+        },
+        { keywords: ["치킨", "치킨집"], serviceName: "치킨전문점" },
+        { keywords: ["호프", "맥주", "주점", "술집"], serviceName: "호프-간이주점" },
+        { keywords: ["분식", "떡볶이"], serviceName: "분식전문점" },
+        { keywords: ["한식", "한식당"], serviceName: "한식음식점" },
+        { keywords: ["중식", "중국집"], serviceName: "중식음식점" },
+        { keywords: ["일식", "초밥"], serviceName: "일식음식점" },
+        { keywords: ["양식"], serviceName: "양식음식점" },
+        { keywords: ["패스트푸드", "햄버거"], serviceName: "패스트푸드점" },
+        { keywords: ["편의점"], serviceName: "편의점" },
+        { keywords: ["미용실", "헤어샵"], serviceName: "미용실" },
+        { keywords: ["네일", "네일샵"], serviceName: "네일숍" },
+        { keywords: ["pc방", "피씨방"], serviceName: "PC방" },
+      ];
+
+      const matched = keywordMap.find((entry) =>
+        entry.keywords.some((keyword) => q.includes(keyword))
+      );
+      if (!matched) return null;
+
+      const categoryMatch = categories.find(
+        (cat) => cat.service_name === matched.serviceName
+      );
+      if (!categoryMatch) return null;
+      return {
+        service_code: categoryMatch.service_code,
+        service_name: categoryMatch.service_name,
+      };
+    },
+    [categories]
+  );
 
   const handleEvent = useCallback(
     (
@@ -101,25 +156,80 @@ export function useStreamingChat(): UseStreamingChatReturn {
         .slice(-6)
         .map((m) => ({ role: m.role, content: m.content }));
 
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+      const inferredCategory = selectedHex ? inferCategory(question) : null;
+
+      let selectedHexDetail =
+        hexDetail && selectedHex && hexDetail.h3_index === selectedHex
+          ? hexDetail
+          : null;
+
+      if (selectedHex && !selectedHexDetail) {
+        const params = new URLSearchParams();
+        params.set("area_type", "COMMERCIAL_AREA");
+        if (quarter && quarter !== "latest") {
+          params.set("qtr", quarter);
+        }
+        if (category && category !== "all") {
+          params.set("category", category);
+        }
+        try {
+          const res = await fetch(
+            `${apiUrl}/api/map/hexagon/${selectedHex}?${params.toString()}`
+          );
+          if (res.ok) {
+            selectedHexDetail = await res.json();
+          }
+        } catch {}
+      }
+
+      if (inferredCategory && selectedHex) {
+        const params = new URLSearchParams();
+        params.set("area_type", "COMMERCIAL_AREA");
+        if (quarter && quarter !== "latest") {
+          params.set("qtr", quarter);
+        }
+        params.set("category", inferredCategory.service_code);
+        try {
+          const res = await fetch(
+            `${apiUrl}/api/map/hexagon/${selectedHex}?${params.toString()}`
+          );
+          if (res.ok) {
+            selectedHexDetail = await res.json();
+          }
+        } catch {}
+      }
+
       const payload: ChatRequest = {
         question,
         messages: historyMessages,
         area_type: "COMMERCIAL_AREA",
       };
-      if (category && category !== "all") {
+      if (inferredCategory) {
+        payload.category = inferredCategory.service_code;
+      } else if (category && category !== "all") {
         payload.category = category;
       }
       if (quarter && quarter !== "latest") {
         payload.qtr = quarter;
       }
-      if (hexDetail) {
-        payload.selected_hex_detail = hexDetail;
+      if (selectedHexDetail) {
+        payload.selected_hex_detail = selectedHexDetail;
+      }
+
+      if (inferredCategory) {
+        setAssistantCategoryInfo(assistantId, {
+          service_code: inferredCategory.service_code,
+          service_name: inferredCategory.service_name,
+          source: "inferred",
+        });
+        if (category !== inferredCategory.service_code) {
+          setCategory(inferredCategory.service_code);
+        }
       }
 
       // Create abort controller
       abortControllerRef.current = new AbortController();
-
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
       try {
         const response = await fetch(`${apiUrl}/api/chat`, {
@@ -196,11 +306,16 @@ export function useStreamingChat(): UseStreamingChatReturn {
       messages,
       category,
       quarter,
+      hexDetail,
+      selectedHex,
+      setCategory,
       addUserMessage,
       startAssistantMessage,
+      setAssistantCategoryInfo,
       setAssistantError,
       setStreaming,
       handleEvent,
+      inferCategory,
     ]
   );
 

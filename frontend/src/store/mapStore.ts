@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type { Category, ComparisonResponse, HexagonDetailResponse } from "@/types/map";
 import type { SocialConfigResponse, SocialTrendsResponse } from "@/types/social";
 
-type ElevationMetric = "flow" | "sales";
+type ElevationMetric = "flow" | "sales" | "timeslot" | "risk";
 
 interface MapState {
   selectedHex: string | null;

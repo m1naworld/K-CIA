@@ -67,6 +67,12 @@ export interface ErrorEvent {
   message: string;
 }
 
+export interface AppliedCategoryInfo {
+  service_code: string;
+  service_name: string;
+  source: "inferred" | "filter";
+}
+
 // Chat message role
 export type MessageRole = "user" | "assistant";
 
@@ -79,6 +85,7 @@ export interface ChatMessage {
   route?: ChatRoute;
   sql?: SqlEvent;
   insight?: InsightEvent;
+  categoryInfo?: AppliedCategoryInfo;
   dataAsof?: string;
   isStreaming?: boolean;
   error?: string;

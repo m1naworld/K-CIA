@@ -4,6 +4,7 @@ import type {
   ChatRoute,
   SqlEvent,
   InsightEvent,
+  AppliedCategoryInfo,
 } from "@/types/chat";
 
 interface ChatState {
@@ -19,6 +20,7 @@ interface ChatState {
   updateAssistantRoute: (id: string, route: ChatRoute) => void;
   updateAssistantSql: (id: string, sql: SqlEvent) => void;
   updateAssistantInsight: (id: string, insight: InsightEvent) => void;
+  setAssistantCategoryInfo: (id: string, info: AppliedCategoryInfo) => void;
   completeAssistantMessage: (id: string, dataAsof: string) => void;
   setAssistantError: (id: string, error: string) => void;
   clearMessages: () => void;
@@ -99,6 +101,13 @@ export const useChatStore = create<ChatState>((set) => ({
         msg.id === id
           ? { ...msg, insight, content: insight.summary || msg.content }
           : msg
+      ),
+    })),
+
+  setAssistantCategoryInfo: (id: string, info: AppliedCategoryInfo) =>
+    set((state) => ({
+      messages: state.messages.map((msg) =>
+        msg.id === id ? { ...msg, categoryInfo: info } : msg
       ),
     })),
 

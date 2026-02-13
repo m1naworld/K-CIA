@@ -12,6 +12,13 @@ export interface HexagonSummary {
   open_cnt: number;
   close_cnt: number;
   sales_qoq: number | null;
+  // Timeslot mode (M10)
+  peak_hour: string | null;
+  peak_hour_ratio: number | null;
+  weekday_ratio: number | null;
+  // Risk mode (M11)
+  risk_score: number | null;
+  risk_level: string | null;
 }
 
 export interface HexagonsResponse {
@@ -66,10 +73,22 @@ export interface GrowthCard {
   store_growth_rate: number | null;
 }
 
+export interface RiskDecompositionItem {
+  factor: string;
+  label: string;
+  value: number | null;
+  score: number;
+  weight: number;
+  contribution: number;
+}
+
 export interface RiskCard {
+  risk_score: number | null;
+  risk_level: string | null; // "High" | "Medium" | "Low"
   close_rate: number | null;
   competition_density: number | null;
   warnings: string[];
+  decomposition: RiskDecompositionItem[];
 }
 
 export interface RecommendationCard {
@@ -136,6 +155,20 @@ export interface TimeSlotRecommendation {
   recommendations: TimeSlotItem[];
 }
 
+// ---------- Alternative Area (M11-3) ----------
+
+export interface AlternativeArea {
+  h3_index: string;
+  area_name: string | null;
+  risk_score: number;
+  risk_level: string; // "High" | "Medium" | "Low"
+  flow_total: number | null;
+  sales_amt: number | null;
+  store_cnt: number | null;
+  close_rate: number | null;
+  sales_qoq: number | null;
+}
+
 // ---------- Comparison (M8) ----------
 
 export interface ComparisonMetricSnapshot {
@@ -187,6 +220,7 @@ export interface HexagonDetailResponse {
   lng: number;
   qtr: string;
   data_asof: string;
+  primary_area_name: string | null;
   areas: string[];
   flow: FlowCard;
   sales: SalesCard;
@@ -198,4 +232,36 @@ export interface HexagonDetailResponse {
   facility: FacilityCard | null;
   demo: DemoCard | null;
   time_slot: TimeSlotRecommendation | null;
+  operating_strategy: OperatingStrategyCard | null;
+  alternatives: AlternativeArea[];
+}
+
+// ---------- Operating Strategy (M10) ----------
+
+export interface TimeSlotStrategy {
+  hour_range: string;
+  label: string;
+  flow_ratio: number;
+  estimated_revenue_share: number;
+  staff_ratio: number;
+  is_peak: boolean;
+}
+
+export interface WeekdayPattern {
+  weekday_flow_ratio: number | null;
+  weekend_flow_ratio: number | null;
+  peak_day: string | null;
+  peak_day_flow: number | null;
+}
+
+export interface OperatingStrategyCard {
+  recommended_open: string;
+  recommended_close: string;
+  recommended_hours: number;
+  peak_slots: TimeSlotStrategy[];
+  off_peak_slots: TimeSlotStrategy[];
+  all_slots: TimeSlotStrategy[];
+  weekday_pattern: WeekdayPattern | null;
+  total_flow: number | null;
+  assumptions: string[];
 }
