@@ -89,15 +89,18 @@ export default function OperatingStrategyCard({ data }: Props) {
 
         {/* 24h Timeline Bar */}
         <div className="mt-2">
-          <div className="relative h-6 w-full overflow-hidden rounded bg-slate-100 dark:bg-white/5">
+          <div className="relative h-6 w-full overflow-hidden rounded border border-slate-300/60 bg-slate-100/80 dark:border-white/15 dark:bg-slate-800/40">
             {/* Operating hours background */}
             <div
-              className="absolute top-0 h-full bg-emerald-500/20 dark:bg-emerald-500/15"
+              className="absolute top-0 h-full bg-emerald-500/30 ring-1 ring-emerald-500/40 dark:bg-emerald-400/20 dark:ring-emerald-400/40"
               style={{
                 left: `${(openHour / 24) * 100}%`,
                 width: `${(((closeHour > openHour ? closeHour - openHour : 24 - openHour + closeHour)) / 24) * 100}%`,
               }}
             />
+            <div className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-[9px] font-medium text-emerald-700/80 dark:text-emerald-300/80">
+              영업
+            </div>
             {/* Peak slot highlights */}
             {data.peak_slots.map((slot) => {
               const start = parseHour(slot.hour_range);
@@ -105,7 +108,7 @@ export default function OperatingStrategyCard({ data }: Props) {
               return (
                 <div
                   key={slot.hour_range}
-                  className="absolute top-0 h-full bg-amber-500/40 dark:bg-amber-500/30"
+                  className="absolute top-0 h-full bg-amber-500/55 ring-1 ring-amber-500/70 dark:bg-amber-400/35 dark:ring-amber-400/60"
                   style={{
                     left: `${(start / 24) * 100}%`,
                     width: `${(hours / 24) * 100}%`,
@@ -163,12 +166,14 @@ export default function OperatingStrategyCard({ data }: Props) {
                 >
                   {slot.label}
                 </Badge>
-                <div className="relative h-3 flex-1 overflow-hidden rounded-full bg-slate-200/70 dark:bg-white/5">
+                <div className="relative h-4 flex-1 overflow-hidden rounded-full border border-slate-300/70 bg-slate-200 dark:border-white/15 dark:bg-slate-900/60">
                   <div
-                    className={`h-full rounded-full transition-all ${
-                      slot.is_peak ? "bg-amber-500/60" : "bg-slate-400/40 dark:bg-white/20"
+                    className={`h-full rounded-full shadow-sm transition-all ${
+                      slot.is_peak
+                        ? "bg-amber-500 ring-1 ring-amber-400/70 dark:bg-amber-400 dark:ring-amber-300/70"
+                        : "bg-slate-500 ring-1 ring-slate-400/60 dark:bg-slate-300/70 dark:ring-white/30"
                     }`}
-                    style={{ width: `${barWidth}%` }}
+                    style={{ width: `${barWidth}%`, minWidth: barWidth > 0 ? "6px" : "0px" }}
                   />
                 </div>
                 <span className="w-8 text-right text-[10px] font-medium text-slate-600 dark:text-white/50">
