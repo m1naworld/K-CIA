@@ -10,7 +10,7 @@
 
 ### MVP 정의: 시나리오 1 "입지 Top3 추천" 완결 ← **완료**
 
-> **현재 단계: Phase 3 (S3 팝업 + S4 분기비교) + SNS 모듈 진입**
+> **현재 단계: Phase 2 (S2 피크타임 + S5 리스크 진단) 진입**
 
 **Definition of Done (DoD):**
 
@@ -195,20 +195,51 @@
 | **산출물** | 비교 API + UI |
 | **DoD** | 2개 분기 선택 → Before/After 비교 카드 + 차트 렌더링 |
 
-### M9: SNS Module (YouTube + Naver + Social Agent + UI)
+### M9: SNS Module (YouTube + Naver + Social Agent + UI) ✅ DONE
 
 | 항목 | 내용 |
 |------|------|
 | **입력** | M6~M8 완료 |
 | **작업 체크리스트** | |
-| | - [ ] `005_sns_module.sql` — fact_social_trend_daily, social_module_config 테이블 |
-| | - [ ] YouTube Collector + Loader (youtube_collector.py, load_youtube_trends.py) |
-| | - [ ] Naver Collector + Loader (naver_collector.py, load_naver_trends.py) |
-| | - [ ] Social Agent (모듈 ON/OFF 분기) |
-| | - [ ] Social API (GET /api/social/trends, /api/social/config) |
-| | - [ ] Frontend: SocialToggle, SocialBuzzCard, KeywordCloudCard, EvidenceSnippetsCard |
+| | - [x] `005_sns_module.sql` — fact_social_trend_daily, social_module_config 테이블 |
+| | - [x] YouTube Collector + Loader (youtube_collector.py, load_youtube_trends.py) |
+| | - [x] Naver Collector + Loader (naver_collector.py, load_naver_trends.py) |
+| | - [x] Social Agent (모듈 ON/OFF 분기) |
+| | - [x] Social API (GET /api/social/trends, /api/social/config) |
+| | - [x] Frontend: SocialToggle, SocialBuzzCard, KeywordCloudCard, EvidenceSnippetsCard |
 | **산출물** | SNS ETL, Social Agent, Social API, SNS UI |
-| **DoD** | SNS ON → 소셜 카드 표시, SNS OFF → 기존 기능 정상 동작 |
+| **DoD** | SNS ON → 소셜 카드 표시 ✓, SNS OFF → 기존 기능 정상 동작 ✓ |
+
+### M10: S2 피크타임 운영전략 (시간대 분석 + 운영 최적화)
+
+| 항목 | 내용 |
+|------|------|
+| **입력** | M1~M4 완료 (D5 flow_by_hour/weekday JSONB 적재됨), TimeSlotCard/RiskCard 기존 구현 |
+| **작업 체크리스트** | |
+| | - [ ] Backend: `GET /api/map/hexagons` — `mode=timeslot` 파라미터 추가. 시간대별 유동 피크 데이터 반환 |
+| | - [ ] Backend: Hexagon Detail 확장 — OperatingStrategyCard: 피크/오프피크 인력 배분, 시간대별 매출 기여도 추정, 권장 영업시간 |
+| | - [ ] Backend: SQL Agent 프롬프트 — 시간대/요일 분석 쿼리 패턴 추가 ("오후 3~5시", "주말 vs 평일", "피크타임") |
+| | - [ ] Frontend: HexMap `elevationMetric: "timeslot"` 추가. 색상=피크 시간대 유동 비중, 높이=유동인구. 평일/주말 토글 |
+| | - [ ] Frontend: TimeSlotCard 확장 — 피크/오프피크 상세 (3개/2개), 시간대별 유동/매출 이중 차트, 평일vs주말 비교 |
+| | - [ ] Frontend: OperatingStrategyCard — 권장 영업시간, 인력 스케줄 시각화, 가정값 입력 (객단가/회전율/좌석수) |
+| **산출물** | 시간대 모드 API, 운영전략 카드, 확장된 TimeSlotCard, HexMap 시간대 시각화 |
+| **DoD** | 시간대 히트맵 토글 동작, Hex 클릭 시 피크/오프피크 상세 + 운영전략 카드 표시, 챗봇 "오후 3~5시 인력 줄여도 돼?" 질의에 시간대 근거 응답 |
+
+### M11: S5 경쟁과밀/폐업 리스크 진단 (리스크 스코어 + 분해 + 대안)
+
+| 항목 | 내용 |
+|------|------|
+| **입력** | M1~M4 완료 (D2 점포/개폐업 적재됨, RiskCard 기존 구현) |
+| **작업 체크리스트** | |
+| | - [x] Backend: 리스크 스코어 알고리즘 — `risk_score = w1*폐업QoQ + w2*점포증가율 + w3*매출QoQ(-) + w4*경쟁밀도` (0~100 정규화). Hexagon Detail에 추가 |
+| | - [x] Backend: `GET /api/map/hexagons` — `mode=risk` 파라미터 추가. 리스크 레이어 데이터 반환 |
+| | - [ ] Backend: 리스크 분해 API — RiskDecompositionCard: 원인 기여도 (폐업/점포/매출/유동 각 %), 대안 구역 2곳 추천 |
+| | - [ ] Backend: SQL Agent 프롬프트 — 리스크/폐업/경쟁 분석 쿼리 패턴 추가 |
+| | - [ ] Frontend: HexMap `elevationMetric: "risk"` 추가. 색상=리스크스코어 (초록→노랑→빨강), 높이=매출 |
+| | - [ ] Frontend: RiskCard 확장 — 리스크 스코어 게이지(0-100), 원인 분해 바차트, 심각도 배지 |
+| | - [ ] Frontend: AlternativeAreasCard — 대안 구역 2곳 비교표 (유동/매출/경쟁/리스크) |
+| **산출물** | 리스크 모드 API, 리스크 스코어, 분해 카드, 대안 카드, HexMap 리스크 시각화 |
+| **DoD** | 리스크 레이어 토글 동작, Hex 클릭 시 리스크 스코어 + 원인 분해 + 대안 구역 표시, 챗봇 "이 구역 리스크 높은 이유?" 질의에 분해 근거 응답 |
 
 ---
 
@@ -328,8 +359,9 @@
 
 ```
 Phase 1: S1 (MVP) ← 완료
-Phase 3: S3 + S4 (타겟 필터 + 기간 비교) ← 현재
-Phase 2: S2 + S5 (시간대 + 리스크) ← 다음
+Phase 3: S3 + S4 (타겟 필터 + 기간 비교) ← 완료
+  └ SNS 모듈 (M9) ← 완료
+Phase 2: S2 + S5 (시간대 + 리스크) ← 현재
 Phase 4: S6 (콘텐츠 생성)
 Phase 5: S7 + S8 (포트폴리오)
 ```

@@ -121,6 +121,19 @@
 
 ---
 
+## DEC-010: 시간대 카드 JSONB는 H3 가중 집계 기준으로 통일
+
+| 항목 | 내용 |
+|------|------|
+| **날짜** | 2026-02-11 |
+| **결정** | Hexagon detail의 시간대/요일/데모(JSONB)는 참여 area들의 H3 가중치 합산으로 집계하고, `mode=timeslot`의 `data_asof`는 `flow_qtr` 기준으로 반환 |
+| **근거** | (1) `cur_flow`는 H3 가중 합산인데 시간대 패턴이 단일 area 샘플이면 카드 결과가 왜곡될 수 있음. (2) timeslot 모드의 핵심 지표는 D5(유동) 기준이므로 as-of 혼동을 방지해야 함 |
+| **대안** | 첫 번째 area 샘플 유지 → 카드 간 불일치 리스크. as-of를 sales_qtr로 고정 → 시간대 모드에서 기준시점 혼동 |
+| **영향범위** | `backend/api/map.py` (flow_by_hour/weekday/demo 집계), Map API 응답의 `data_asof` 표기 |
+| **재검토 조건** | H3 가중 집계로 인한 성능 이슈 발생 시 materialized view로 전환 검토 |
+
+---
+
 ## DEC-010: Chat API SSE 스트리밍 방식 채택
 
 | 항목 | 내용 |

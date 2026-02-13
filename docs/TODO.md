@@ -638,3 +638,160 @@
 | **의존성** | M9-8, M9-10 |
 | **리스크** | Kakao API 쿼터, Gemini rate limit |
 | **DoD** | videos.list enrichment ✓, per-(date, area_id) aggregation ✓, spatial-first mapping ✓, YouTube 10/17 ✓, Naver 15/17 ✓ |
+
+---
+
+## M10: S2 피크타임 운영전략
+
+### M10-1: Hexagons API 시간대 모드 [P0] ✅ DONE (2026-02-11)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 지도에서 시간대별 유동 패턴을 시각화할 데이터 제공 |
+| **작업** | `backend/api/map.py` — `GET /api/map/hexagons` 에 `mode=timeslot` 파라미터 추가. flow_by_hour JSONB에서 피크 시간대 비중, 평일/주말 유동 패턴 계산. HexagonSummary에 `peak_hour`, `peak_hour_ratio`, `weekday_ratio` 필드 추가. `_compute_timeslot_summary()` 헬퍼 함수. timeslot 모드 `data_asof`는 `flow_qtr` 기준으로 반환. ETL flow_by_hour 필드명 버그 수정 + 재적재 |
+| **산출물** | 확장된 hexagons API |
+| **의존성** | M2-1 |
+| **리스크** | JSONB 집계 쿼리 성능 — 필요 시 materialized view |
+| **DoD** | `mode=timeslot` 호출 시 peak_hour="17_21", peak_hour_ratio=0.1919, weekday_ratio=0.7195 반환 ✓, data_asof=flow_qtr ✓ |
+
+### M10-2: Hexagon Detail 운영전략 카드 [P0] ✅ DONE (2026-02-11)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 선택 구역의 피크/오프피크 기반 운영 추천 |
+| **작업** | `backend/api/schemas.py` — OperatingStrategyCard, TimeSlotStrategy, WeekdayPattern 모델. `backend/api/map.py` — _build_operating_strategy(), _build_weekday_pattern() 빌더. 피크 시간대 유동비중 기반 인력 배분율 계산, 권장 영업시간 산출, 평일/주말 패턴 분석. flow_by_hour/weekday/demo를 H3 가중 집계로 통일 |
+| **산출물** | OperatingStrategyCard API 응답 |
+| **의존성** | M2-1, M6-4 |
+| **리스크** | 매출 시간대별 데이터 없음 (D1은 분기 총액만) — 유동 기반 추정으로 대체 |
+| **DoD** | hexagon detail에 operating_strategy 필드 포함, 피크/오프피크 시간대 + 권장 인력 배분 반환 ✓ |
+
+### M10-3: SQL Agent 시간대/요일 분석 패턴 [P0] ✅ DONE (2026-02-11)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 챗봇에서 시간대/요일 관련 질의 처리 |
+| **작업** | `backend/agents/sql_agent.py` — JSONB 시간대 추출 쿼리 패턴 추가 (flow_by_hour->>'11_14', 평일/주말 합산). 키워드 매핑: "피크타임", "오후", "주말", "야간", "심야", "인력", "영업시간". 4개 예제: 특정 시간대 유동인구, 피크 시간대 찾기, 주말 vs 평일 비교, 시간대별 매출 기여 추정. 매출 시간대 추정 주의사항(유동 기반 추정) |
+| **산출물** | 업데이트된 SQL Agent |
+| **의존성** | M2-3 |
+| **리스크** | 낮음 |
+| **DoD** | "오후 3~5시 유동인구", "주말 vs 평일 비교" 질의에 JSONB 추출 SQL 생성 ✓ |
+
+### M10-4: HexMap 시간대 모드 시각화 [P0] ✅ DONE (2026-02-12)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 지도에서 시간대별 유동 패턴 시각화 |
+| **작업** | `frontend/src/components/map/HexMap.tsx` — `elevationMetric: "timeslot"` 추가. 색상=피크 시간대 유동 비중 (파랑→빨강), 높이=유동인구. `frontend/src/store/mapStore.ts` — ElevationMetric에 timeslot 추가. 범례/툴팁 업데이트 |
+| **산출물** | HexMap 시간대 모드 |
+| **의존성** | M10-1, M3-1 |
+| **리스크** | 낮음 |
+| **DoD** | 시간대 모드 토글 시 색상/높이/범례/툴팁 변경 ✓, API mode=timeslot 전달 ✓, 빌드 성공 ✓ |
+
+### M10-5: TimeSlotCard 확장 [P0] ✅ DONE (2026-02-12)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 피크/오프피크 상세 분석 표시 |
+| **작업** | `frontend/src/components/sidebar/TimeSlotCard.tsx` — 피크/오프피크 자동 분류 (OperatingStrategy 기반, peak_slots/off_peak_slots), 요일×시간대 유동 히트맵 (flow_by_hour × flow_by_weekday 비례 추정), 평일 vs 주말 유동 비교 (비율 바 + 일별 막대). Sidebar.tsx에서 flow/operating_strategy props 전달 |
+| **산출물** | 확장된 TimeSlotCard (3개 섹션: 피크분류 + 히트맵 + 평일/주말) |
+| **의존성** | M7-4, M10-2 |
+| **리스크** | 낮음 |
+| **DoD** | 히트맵 + 평일/주말 비교 표시 ✓, 피크/오프피크 자동 분류 ✓, 빌드 성공 ✓ |
+
+**Bugfix (2026-02-12)**
+- 히트맵 색상 정규화 방식 개선 (min-max) — 낮은/높은 시간대 대비 강화
+
+### M10-6: OperatingStrategyCard 컴포넌트 [P0] ✅ DONE (2026-02-12)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 운영전략 시각화 및 가정값 입력 |
+| **작업** | `frontend/src/components/sidebar/OperatingStrategyCard.tsx` — 신규. 권장 영업시간 타임라인, 인력 스케줄 시각화 (시간대별 바), 가정값 입력 UI (객단가/회전율/좌석수). Sidebar.tsx에 조건부 렌더링 추가 |
+| **산출물** | OperatingStrategyCard 컴포넌트 |
+| **의존성** | M10-2, M10-5 |
+| **리스크** | 가정값 입력 UX 복잡도 |
+| **DoD** | 권장 영업시간 타임라인 ✓, 인력 스케줄 바 ✓, 가정값 입력(객단가/회전율/좌석수) ✓, 변경 시 실시간 재계산 ✓, 빌드 성공 ✓ |
+
+**Bugfix (2026-02-12)**
+- 객단가 입력 마지막 0 표시 누락 → text 입력 + 문자열 state로 표시 보존
+
+---
+
+## M11: S5 경쟁과밀/폐업 리스크 진단
+
+### M11-1: 리스크 스코어 알고리즘 [P0] ✅ DONE (2026-02-13)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 구역별 리스크를 0~100으로 정량화 |
+| **작업** | `backend/api/map.py` — `_calc_risk_score()` 함수. `risk_score = w1*폐업QoQ + w2*점포증가율 + w3*매출QoQ(-) + w4*경쟁밀도`. 각 요소를 선형 정규화(threshold 기반) 후 가중합 → 0~100 매핑. `backend/api/schemas.py` — RiskCard에 `risk_score: float`, `risk_level: str` (High/Medium/Low), `decomposition: list[RiskDecompositionItem]` 추가 |
+| **산출물** | 리스크 스코어 계산 로직 |
+| **의존성** | M2-1 |
+| **리스크** | 가중치 튜닝 필요 — 기본값 제공 후 사용자 피드백으로 조정 |
+| **DoD** | hexagon detail에 risk_score(0~100) + risk_level + decomposition 포함 ✓ |
+
+### M11-2: Hexagons API 리스크 모드 [P0] ✅ DONE (2026-02-13)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 지도에서 리스크 수준 시각화 |
+| **작업** | `backend/api/map.py` — `GET /api/map/hexagons` 에 `mode=risk` 파라미터 추가. HexagonSummary에 `risk_score`, `risk_level` 필드 추가. prev_store_agg CTE로 점포 QoQ 계산. 폐업률, 점포 증가율, 매출 QoQ, 경쟁밀도를 조합하여 계산 |
+| **산출물** | 확장된 hexagons API |
+| **의존성** | M11-1, M2-1 |
+| **리스크** | JSONB 쿼리 성능 |
+| **DoD** | `mode=risk` 호출 시 217개 Hex에 risk_score(29.5~69.2) + risk_level(Low/Medium/High) 포함 응답 반환 ✓ |
+
+### M11-3: 리스크 분해 + 대안 구역 API [P0] ✅ DONE (2026-02-13)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 리스크 원인 분석 + 대안 추천 |
+| **작업** | `backend/api/map.py` — `_find_alternatives()` 함수: 동일 area_type+업종 내 전체 Hex 리스크 계산 → 현재 Hex 제외 → 리스크 낮은 순 상위 2곳 반환. `backend/api/schemas.py` — AlternativeArea 모델 (h3_index, area_name, risk_score, risk_level, flow_total, sales_amt, store_cnt, close_rate, sales_qoq). HexagonDetailResponse에 alternatives 필드 추가. 기존 RiskDecompositionItem.contribution으로 기여도(%) 계산 가능 |
+| **산출물** | 리스크 분해 + 대안 API |
+| **의존성** | M11-1 |
+| **리스크** | 대안 추천 시 동일 업종 데이터 부족 가능 — 전체 업종 폴백 |
+| **DoD** | hexagon detail에 risk decomposition(4요소 기여도%) + alternatives(2곳) 필드 포함 ✓ |
+
+### M11-4: SQL Agent 리스크 분석 패턴 [P0] ✅ DONE (2026-02-13)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 챗봇에서 리스크/경쟁 관련 질의 처리 |
+| **작업** | `backend/agents/sql_agent.py` — 리스크 관련 SQL 패턴 추가. 폐업률 추세 쿼리 (QoQ 폐업수/점포수), 경쟁 밀도 비교 (상권별 업종 점포수), 리스크 랭킹 (폐업률+매출감소 복합). 키워드: "리스크", "폐업", "경쟁", "과밀", "위험", "포화" |
+| **산출물** | 업데이트된 SQL Agent |
+| **의존성** | M2-3 |
+| **리스크** | 낮음 |
+| **DoD** | "이 구역 디저트 업종 리스크 높은 이유" 질의에 폐업/경쟁/매출 분석 SQL 생성 |
+
+### M11-5: HexMap 리스크 모드 시각화 [P0] ✅ DONE (2026-02-13)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 지도에서 리스크 레이어 시각화 |
+| **작업** | `frontend/src/components/map/HexMap.tsx` — `getRiskColorScale()` (초록→노랑→빨강), `elevationMetric: "risk"` (높이=매출, 색상=리스크), 리스크 전용 툴팁 (스코어/레벨), 범례 (Low→High), "리스크" 토글 버튼 (빨강 활성) |
+| **산출물** | HexMap 리스크 모드 |
+| **의존성** | M11-2, M3-1 |
+| **리스크** | 낮음 |
+| **DoD** | 리스크 모드 토글 시 색상(초록→빨강)/높이/범례/툴팁 변경 ✓, 빌드 성공 ✓ |
+
+### M11-6: RiskCard 확장 [P0] ✅ DONE (2026-02-13)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 리스크 상세 분석 시각화 |
+| **작업** | `frontend/src/components/sidebar/Sidebar.tsx` — RiskCard 섹션 확장. 리스크 스코어 게이지 (0-100, 색상 그라데이션 바). 심각도 배지 (고위험=빨강/주의=노랑/양호=초록). 원인 분해 수평 바차트 (기여도%, 점수 기반 색상, 원시값 표시) |
+| **산출물** | 확장된 RiskCard UI |
+| **의존성** | M11-1, M3-3 |
+| **리스크** | 낮음 |
+| **DoD** | 리스크 스코어 게이지 + 분해 차트 + 심각도 배지 표시 ✓, 빌드 성공 ✓ |
+
+### M11-7: AlternativeAreasCard 컴포넌트 [P0] ✅ DONE (2026-02-13)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | 대안 구역 추천 시각화 |
+| **작업** | `frontend/src/components/sidebar/AlternativeAreasCard.tsx` — 신규. 대안 구역 2곳 카드 (area_name, risk_score, 유동/매출/경쟁 비교 테이블, 리스크 개선폭). 클릭 시 해당 Hex로 맵 이동 + 상세 표시. Sidebar.tsx에 조건부 렌더링 추가 |
+| **산출물** | AlternativeAreasCard 컴포넌트 |
+| **의존성** | M11-3, M11-6 |
+| **리스크** | 낮음 |
+| **DoD** | 대안 2곳 비교표 표시 ✓, 클릭 시 맵 이동 ✓, 유동/매출/점포/폐업률 비교 ✓, 리스크 개선폭 표시 ✓ |
