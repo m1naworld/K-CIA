@@ -61,7 +61,7 @@ export function SqlCard({ sql }: SqlCardProps) {
       </CardHeader>
       {isExpanded && (
         <CardContent className="pt-0">
-          <pre className="overflow-x-auto rounded bg-slate-900 p-2 text-[10px] text-cyan-200/80 dark:bg-gray-950 dark:text-cyan-300/80">
+          <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-all rounded bg-slate-900 p-2 text-[10px] text-cyan-200/80 dark:bg-gray-950 dark:text-cyan-300/80">
             <code>{sql.sql}</code>
           </pre>
         </CardContent>

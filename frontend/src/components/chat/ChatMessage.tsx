@@ -55,6 +55,17 @@ export function ChatMessage({ message }: ChatMessageProps) {
         </div>
       )}
 
+      {message.categoryInfo?.source === "inferred" && (
+        <div className="flex items-center gap-2">
+          <Badge
+            variant="outline"
+            className="border-slate-200 bg-slate-100 text-[10px] text-slate-500 dark:border-white/20 dark:bg-gray-800/50 dark:text-white/50"
+          >
+            업종 자동 적용: {message.categoryInfo.service_name}
+          </Badge>
+        </div>
+      )}
+
       {/* SQL Card */}
       {message.sql && <SqlCard sql={message.sql} />}
 
