@@ -37,9 +37,9 @@ K-CIA/
 │   ├── PROGRESS.md                    # 진행상황 로그
 │   ├── DECISIONS.md                   # 의사결정 로그
 │   └── ui.md                          # UI 코딩 표준
-├── frontend/                          # Next.js 앱 (구현 예정)
-├── backend/                           # FastAPI 서버 (구현 예정)
-├── etl/                               # 데이터 파이프라인 (구현 예정)
+├── frontend/                          # Next.js 앱 (구현 완료)
+├── backend/                           # FastAPI 서버 (구현 완료)
+├── etl/                               # 데이터 파이프라인 (구현 완료)
 └── tests/                             # 테스트
 ```
 
@@ -52,11 +52,11 @@ K-CIA/
 | [데이터 기획](K-CIA_Lite_DataPlan.md) | 데이터 소스/스키마/LLM 설계 |
 | [데이터 수집 계획](K-CIA_Lite_DataIngestionPlan.md) | 수집 파이프라인 상세 |
 | [실행 계획](docs/PLAN.md) | 마일스톤/데이터 최소셋/확장 로드맵 |
-| [작업 티켓](docs/TODO.md) | M0~M4 실행용 티켓 |
+| [작업 티켓](docs/TODO.md) | M0~M11 실행용 티켓 |
 | [진행상황](docs/PROGRESS.md) | 진행 로그/블로커/다음 액션 |
 | [의사결정 로그](docs/DECISIONS.md) | 확정된 결정사항과 근거 |
 | [UI 코딩 표준](docs/ui.md) | shadcn/ui, date-fns, 도메인 컴포넌트 규칙 |
 
 ## 현재 상태
 
-**Phase: Planning Complete** — 시나리오 1(P1 입지 Top3 추천) 중심 실행 계획 수립 완료. 코드 구현 대기 중.
+**Phase: Phase 2 Complete** — M10(피크타임) + M11(리스크) 완료. Phase 4(콘텐츠 생성) 계획 수립 대기.
