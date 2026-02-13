@@ -12,6 +12,7 @@ import h3
 
 from db import get_db
 from api.schemas import (
+    AlternativeArea,
     ComparisonBreakdown,
     ComparisonChange,
     ComparisonMetricSnapshot,
@@ -28,13 +29,17 @@ from api.schemas import (
     HexagonDetailResponse,
     HexagonSummary,
     HexagonsResponse,
+    OperatingStrategyCard,
     RecommendationCard,
     RiskCard,
+    RiskDecompositionItem,
     SalesCard,
     TimeSlotItem,
     TimeSlotRecommendation,
+    TimeSlotStrategy,
     TrendData,
     TrendPoint,
+    WeekdayPattern,
 )
 
 router = APIRouter(prefix="/api/map", tags=["map"])
@@ -80,6 +85,45 @@ def _safe_div(a: float | None, b: float | None) -> float | None:
     return round((a - b) / b, 4)
 
 
+def _weighted_json_sum(
+    rows,
+    weights: dict[int, float],
+    target_qtr: str,
+    field: str,
+    keys: list[str],
+) -> dict | None:
+    """Weighted sum for JSONB fields (flow_by_hour/weekday/demo)."""
+    if not target_qtr:
+        return None
+    acc = {k: 0.0 for k in keys}
+    found = False
+    for r in rows:
+        if r.qtr != target_qtr:
+            continue
+        raw = getattr(r, field, None)
+        if raw is None:
+            continue
+        data = raw
+        if isinstance(data, str):
+            try:
+                data = json.loads(data)
+            except json.JSONDecodeError:
+                continue
+        if not isinstance(data, dict):
+            continue
+        weight = weights.get(r.area_id, 1.0)
+        for k in keys:
+            val = data.get(k)
+            if val is None:
+                continue
+            try:
+                acc[k] += float(val) * weight
+                found = True
+            except (ValueError, TypeError):
+                continue
+    return acc if found else None
+
+
 FACILITY_LABELS: dict[str, str] = {
     "VIATR_FCLTY": "관광시설",
     "PBLOFC": "관공서",
@@ -105,6 +149,56 @@ FACILITY_LABELS: dict[str, str] = {
 
 WEEKDAY_LABELS = ["월", "화", "수", "목", "금", "토", "일"]
 AGE_GROUPS = ["10", "20", "30", "40", "50", "60+"]
+WEEKDAY_KEYS = ["mon", "tue", "wed", "thu", "fri"]
+WEEKEND_KEYS = ["sat", "sun"]
+HOUR_KEYS = ["00_06", "06_11", "11_14", "14_17", "17_21", "21_24"]
+DEMO_KEYS = [
+    "male", "female",
+    "age_10", "age_20", "age_30", "age_40", "age_50", "age_60+",
+]
+
+
+def _compute_timeslot_summary(
+    flow_by_hour: dict | str | None,
+    flow_by_weekday: dict | str | None,
+) -> tuple[str | None, float | None, float | None]:
+    """Return (peak_hour, peak_hour_ratio, weekday_ratio) from JSONB data."""
+    peak_hour: str | None = None
+    peak_hour_ratio: float | None = None
+    weekday_ratio: float | None = None
+
+    if flow_by_hour:
+        hour_data = flow_by_hour
+        if isinstance(hour_data, str):
+            hour_data = json.loads(hour_data)
+        if isinstance(hour_data, dict):
+            slots: list[tuple[str, float]] = []
+            for key in ("00_06", "06_11", "11_14", "14_17", "17_21", "21_24"):
+                val = hour_data.get(key)
+                if val is not None:
+                    try:
+                        slots.append((key, float(val)))
+                    except (ValueError, TypeError):
+                        pass
+            total = sum(v for _, v in slots)
+            if total > 0 and slots:
+                # Normalize by slot duration to find true per-hour peak
+                best = max(slots, key=lambda x: x[1] / SLOT_HOURS.get(x[0], 1))
+                peak_hour = best[0]
+                peak_hour_ratio = round(best[1] / total, 4)
+
+    if flow_by_weekday:
+        wd_data = flow_by_weekday
+        if isinstance(wd_data, str):
+            wd_data = json.loads(wd_data)
+        if isinstance(wd_data, dict):
+            wd_sum = sum(float(wd_data.get(k, 0) or 0) for k in WEEKDAY_KEYS)
+            we_sum = sum(float(wd_data.get(k, 0) or 0) for k in WEEKEND_KEYS)
+            total_wd = wd_sum + we_sum
+            if total_wd > 0:
+                weekday_ratio = round(wd_sum / total_wd, 4)
+
+    return peak_hour, peak_hour_ratio, weekday_ratio
 
 
 def _build_facility_card(
@@ -253,8 +347,12 @@ def _build_time_slot(
                     ratio = round(flow / total_flow, 4)
                     recommendations.append(TimeSlotItem(hour_range=label, label=desc, flow_ratio=ratio))
 
-                # Sort by flow descending for peak/off-peak
-                sorted_slots = sorted(slot_flows, key=lambda x: x[3], reverse=True)
+                # Sort by per-hour density for peak/off-peak (slots have unequal durations)
+                sorted_slots = sorted(
+                    slot_flows,
+                    key=lambda x: x[3] / SLOT_HOURS.get(x[0], 1),
+                    reverse=True,
+                )
                 # Peak: midpoint hour of top 2 slots
                 for key, _, _, _ in sorted_slots[:2]:
                     parts = key.split("_")
@@ -278,6 +376,404 @@ def _build_time_slot(
     )
 
 
+SLOT_DEFS = [
+    ("00_06", "00~06", "심야·새벽"),
+    ("06_11", "06~11", "오전"),
+    ("11_14", "11~14", "점심"),
+    ("14_17", "14~17", "오후"),
+    ("17_21", "17~21", "저녁"),
+    ("21_24", "21~24", "야간"),
+]
+
+SLOT_HOURS = {
+    "00_06": 6, "06_11": 5, "11_14": 3,
+    "14_17": 3, "17_21": 4, "21_24": 3,
+}
+
+SLOT_OPEN_HOUR = {
+    "00_06": 0, "06_11": 6, "11_14": 11,
+    "14_17": 14, "17_21": 17, "21_24": 21,
+}
+SLOT_CLOSE_HOUR = {
+    "00_06": 6, "06_11": 11, "11_14": 14,
+    "14_17": 17, "17_21": 21, "21_24": 24,
+}
+
+WD_MAP = {
+    "mon": "월", "tue": "화", "wed": "수", "thu": "목",
+    "fri": "금", "sat": "토", "sun": "일",
+}
+
+
+def _build_operating_strategy(
+    flow_by_hour: dict | str | None,
+    flow_by_weekday: dict | str | None,
+    flow_total: float | None,
+) -> OperatingStrategyCard | None:
+    if not flow_by_hour:
+        return None
+
+    hour_data = flow_by_hour
+    if isinstance(hour_data, str):
+        hour_data = json.loads(hour_data)
+    if not isinstance(hour_data, dict):
+        return None
+
+    slot_flows: list[tuple[str, str, str, float]] = []
+    for key, label, desc in SLOT_DEFS:
+        val = hour_data.get(key)
+        if val is not None:
+            try:
+                slot_flows.append((key, label, desc, float(val)))
+            except (ValueError, TypeError):
+                pass
+
+    total_flow_hourly = sum(f for _, _, _, f in slot_flows)
+    if total_flow_hourly <= 0 or len(slot_flows) < 3:
+        return None
+
+    avg_ratio = 1.0 / len(slot_flows)
+    sorted_by_flow = sorted(
+        slot_flows,
+        key=lambda x: x[3] / SLOT_HOURS.get(x[0], 1),
+        reverse=True,
+    )
+
+    peak_count = 2 if len(slot_flows) <= 4 else 3
+    peak_keys = {s[0] for s in sorted_by_flow[:peak_count]}
+
+    total_hours = sum(SLOT_HOURS.get(k, 1) for k, _, _, _ in slot_flows)
+    all_strategies: list[TimeSlotStrategy] = []
+    for key, label, desc, flow_val in slot_flows:
+        ratio = flow_val / total_flow_hourly
+        hours = SLOT_HOURS.get(key, 1)
+        hourly_density = (flow_val / hours) / (total_flow_hourly / total_hours)
+        staff = round(hourly_density, 2)
+        all_strategies.append(TimeSlotStrategy(
+            hour_range=label,
+            label=desc,
+            flow_ratio=round(ratio, 4),
+            estimated_revenue_share=round(ratio, 4),
+            staff_ratio=staff,
+            is_peak=key in peak_keys,
+        ))
+
+    peak_slots = [s for s in all_strategies if s.is_peak]
+    off_peak_slots = [s for s in all_strategies if not s.is_peak]
+
+    per_hour_densities = {
+        k: f / SLOT_HOURS.get(k, 1) for k, _, _, f in slot_flows
+    }
+    peak_density = max(per_hour_densities.values()) if per_hour_densities else 1
+    active_keys = [
+        k for k, density in per_hour_densities.items()
+        if density >= peak_density * 0.65
+    ]
+    if active_keys:
+        open_hour = min(SLOT_OPEN_HOUR[k] for k in active_keys)
+        close_hour = max(SLOT_CLOSE_HOUR[k] for k in active_keys)
+    else:
+        open_hour, close_hour = 6, 24
+
+    recommended_hours = close_hour - open_hour
+    if recommended_hours <= 0:
+        recommended_hours += 24
+
+    weekday_pattern = _build_weekday_pattern(flow_by_weekday)
+
+    assumptions = [
+        "시간대별 매출 기여도는 유동인구 비중으로 추정 (D1은 분기 총액만 제공)",
+        "인력 배분은 시간당 유동인구 밀도 기준 (시간대별 구간 길이 정규화 적용)",
+    ]
+
+    return OperatingStrategyCard(
+        recommended_open=f"{open_hour:02d}:00",
+        recommended_close=f"{close_hour:02d}:00" if close_hour < 24 else "24:00",
+        recommended_hours=recommended_hours,
+        peak_slots=peak_slots,
+        off_peak_slots=off_peak_slots,
+        all_slots=all_strategies,
+        weekday_pattern=weekday_pattern,
+        total_flow=flow_total,
+        assumptions=assumptions,
+    )
+
+
+def _build_weekday_pattern(
+    flow_by_weekday: dict | str | None,
+) -> WeekdayPattern | None:
+    if not flow_by_weekday:
+        return None
+
+    wd_data = flow_by_weekday
+    if isinstance(wd_data, str):
+        wd_data = json.loads(wd_data)
+    if not isinstance(wd_data, dict):
+        return None
+
+    wd_sum = sum(float(wd_data.get(k, 0) or 0) for k in WEEKDAY_KEYS)
+    we_sum = sum(float(wd_data.get(k, 0) or 0) for k in WEEKEND_KEYS)
+    total = wd_sum + we_sum
+    if total <= 0:
+        return None
+
+    all_days = [(k, float(wd_data.get(k, 0) or 0)) for k in list(WD_MAP.keys())]
+    peak_day_key, peak_day_flow = max(all_days, key=lambda x: x[1])
+
+    return WeekdayPattern(
+        weekday_flow_ratio=round(wd_sum / total, 4),
+        weekend_flow_ratio=round(we_sum / total, 4),
+        peak_day=WD_MAP.get(peak_day_key),
+        peak_day_flow=peak_day_flow,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Risk Score (M11-1)
+# ---------------------------------------------------------------------------
+
+# Weights for each risk factor (sum = 1.0)
+RISK_WEIGHTS = {
+    "close_rate": 0.30,
+    "store_growth": 0.20,
+    "sales_decline": 0.30,
+    "competition_density": 0.20,
+}
+
+
+def _normalize_risk(
+    value: float | None, low: float, high: float, *, invert: bool = False,
+) -> float:
+    """Map *value* to 0-100 via linear interpolation between thresholds.
+
+    If *invert* is True the sign is flipped first (e.g. positive sales growth
+    becomes a low risk score).
+    """
+    if value is None:
+        return 50.0  # neutral when data is missing
+    v = -value if invert else value
+    if v <= low:
+        return 0.0
+    if v >= high:
+        return 100.0
+    return (v - low) / (high - low) * 100.0
+
+
+def _calc_risk_score(
+    *,
+    close_rate: float | None,
+    store_growth: float | None,
+    sales_growth: float | None,
+    competition_density: float | None,
+) -> tuple[float, str, list[RiskDecompositionItem]]:
+    """Compute composite risk score (0-100).
+
+    Formula:
+        risk = w1·close_rate_norm + w2·store_growth_norm
+             + w3·sales_decline_norm + w4·comp_density_norm
+
+    Normalization thresholds (linear 0-100 mapping):
+        close_rate        : 0%  → 0,  20% → 100
+        store_growth      : -5% → 0,  15% → 100
+        sales_decline     : +10% growth → 0,  -15% → 100  (inverted)
+        competition_density: 5   → 0,  50  → 100
+    """
+    factors = [
+        ("close_rate", "폐업률", close_rate, 0.0, 0.20, False),
+        ("store_growth", "점포 증가율", store_growth, -0.05, 0.15, False),
+        ("sales_decline", "매출 감소", sales_growth, -0.10, 0.15, True),
+        ("competition_density", "경쟁 밀도", competition_density, 5.0, 50.0, False),
+    ]
+
+    decomposition: list[RiskDecompositionItem] = []
+    risk_score = 0.0
+
+    for factor_key, label, raw_value, lo, hi, inv in factors:
+        score = _normalize_risk(raw_value, lo, hi, invert=inv)
+        weight = RISK_WEIGHTS[factor_key]
+        contrib = weight * score
+        risk_score += contrib
+        decomposition.append(RiskDecompositionItem(
+            factor=factor_key,
+            label=label,
+            value=round(raw_value, 4) if raw_value is not None else None,
+            score=round(score, 1),
+            weight=weight,
+            contribution=round(contrib, 1),
+        ))
+
+    risk_score = round(max(0.0, min(100.0, risk_score)), 1)
+
+    if risk_score >= 67:
+        risk_level = "High"
+    elif risk_score >= 34:
+        risk_level = "Medium"
+    else:
+        risk_level = "Low"
+
+    return risk_score, risk_level, decomposition
+
+
+# ---------------------------------------------------------------------------
+# Alternative Areas (M11-3)
+# ---------------------------------------------------------------------------
+
+def _find_alternatives(
+    db: Session,
+    current_h3: str,
+    area_type: str,
+    category: str | None,
+    sales_qtr: str,
+    store_qtr: str,
+    flow_qtr: str,
+    current_risk_score: float,
+    *,
+    top_n: int = 2,
+) -> list[AlternativeArea]:
+    """Find top-N lowest-risk hexagons (excluding current area) with lower risk than current."""
+    prev_sales_qtr = _prev_quarter(sales_qtr) if sales_qtr else ""
+    prev_store_qtr = _prev_quarter(store_qtr) if store_qtr else ""
+
+    cat_filter_sales = ""
+    cat_filter_store = ""
+    cat_filter_prev_sales = ""
+    cat_filter_prev_store = ""
+    params: dict = {
+        "area_type": area_type,
+        "sales_qtr": sales_qtr,
+        "prev_sales_qtr": prev_sales_qtr,
+        "store_qtr": store_qtr,
+        "prev_store_qtr": prev_store_qtr,
+        "flow_qtr": flow_qtr,
+    }
+    if category:
+        cat_filter_sales = "AND cat_id = (SELECT cat_id FROM dim_category WHERE service_code = :cat)"
+        cat_filter_store = "AND cat_id = (SELECT cat_id FROM dim_category WHERE service_code = :cat)"
+        cat_filter_prev_sales = cat_filter_sales
+        cat_filter_prev_store = cat_filter_store
+        params["cat"] = category
+
+    sql = text(f"""
+        WITH hex_areas AS (
+            SELECT bw.h3_index, bw.area_id, bw.weight, da.area_name, da.real_name
+            FROM bridge_area_h3_weight bw
+            JOIN preset_area_scope pas ON pas.area_id = bw.area_id
+            JOIN dim_area da ON da.area_id = bw.area_id
+            WHERE da.area_type = :area_type
+        ),
+        primary_area AS (
+            SELECT DISTINCT ON (h3_index) h3_index, area_id, area_name, real_name
+            FROM hex_areas
+            ORDER BY h3_index, weight DESC
+        ),
+        sales_agg AS (
+            SELECT area_id, SUM(sales_amt) as sales_amt
+            FROM fact_sales_area_qtr
+            WHERE qtr = :sales_qtr {cat_filter_sales}
+            GROUP BY area_id
+        ),
+        prev_sales_agg AS (
+            SELECT area_id, SUM(sales_amt) as sales_amt
+            FROM fact_sales_area_qtr
+            WHERE qtr = :prev_sales_qtr {cat_filter_prev_sales}
+            GROUP BY area_id
+        ),
+        store_agg AS (
+            SELECT area_id, SUM(store_cnt) as store_cnt, SUM(close_cnt) as close_cnt
+            FROM fact_store_area_qtr
+            WHERE qtr = :store_qtr {cat_filter_store}
+            GROUP BY area_id
+        ),
+        prev_store_agg AS (
+            SELECT area_id, SUM(store_cnt) as store_cnt
+            FROM fact_store_area_qtr
+            WHERE qtr = :prev_store_qtr {cat_filter_prev_store}
+            GROUP BY area_id
+        )
+        SELECT
+            pa.h3_index,
+            pa.area_name,
+            pa.real_name,
+            COALESCE(s.sales_amt, 0) AS sales_amt,
+            COALESCE(f.flow_total, 0) AS flow_total,
+            COALESCE(st.store_cnt, 0)::int AS store_cnt,
+            COALESCE(st.close_cnt, 0)::int AS close_cnt,
+            ps.sales_amt AS prev_sales_amt,
+            pst.store_cnt AS prev_store_cnt
+        FROM primary_area pa
+        LEFT JOIN sales_agg s ON s.area_id = pa.area_id
+        LEFT JOIN prev_sales_agg ps ON ps.area_id = pa.area_id
+        LEFT JOIN fact_flow_area_qtr f ON f.area_id = pa.area_id AND f.qtr = :flow_qtr
+        LEFT JOIN store_agg st ON st.area_id = pa.area_id
+        LEFT JOIN prev_store_agg pst ON pst.area_id = pa.area_id
+    """)
+
+    rows = db.execute(sql, params).fetchall()
+
+    current_area_name: str | None = None
+    for r in rows:
+        if r.h3_index == current_h3:
+            current_area_name = r.real_name or r.area_name
+            break
+
+    candidates: list[tuple[float, AlternativeArea]] = []
+    for r in rows:
+        display_name = r.real_name or r.area_name
+        if r.h3_index == current_h3 or display_name == current_area_name:
+            continue
+
+        st_cnt = float(r.store_cnt) if r.store_cnt else None
+        cl_cnt = float(r.close_cnt) if r.close_cnt else None
+        prev_st = float(r.prev_store_cnt) if r.prev_store_cnt else None
+        cur_sales = float(r.sales_amt) if r.sales_amt else None
+        prev_sales = float(r.prev_sales_amt) if r.prev_sales_amt else None
+
+        cr = round(cl_cnt / st_cnt, 4) if cl_cnt and st_cnt and st_cnt > 0 else None
+        sg = _safe_div(st_cnt, prev_st)
+        sq = _safe_div(cur_sales, prev_sales)
+        cd = st_cnt
+
+        score, level, _ = _calc_risk_score(
+            close_rate=cr,
+            store_growth=sg,
+            sales_growth=sq,
+            competition_density=cd,
+        )
+
+        if score >= current_risk_score:
+            continue
+
+        display_name = r.real_name or r.area_name
+        candidates.append((score, AlternativeArea(
+            h3_index=r.h3_index,
+            area_name=display_name,
+            risk_score=score,
+            risk_level=level,
+            flow_total=float(r.flow_total) if r.flow_total else None,
+            sales_amt=cur_sales,
+            store_cnt=int(r.store_cnt) if r.store_cnt else None,
+            close_rate=cr,
+            sales_qoq=sq,
+        )))
+
+    # Sort by risk score ascending (lowest risk first)
+    candidates.sort(key=lambda x: x[0])
+
+    # Deduplicate by area_name — multiple h3 hexes in the same area
+    # share identical area-level metrics, so only keep the first (lowest risk) per area
+    seen_areas: set[str | None] = set()
+    deduped: list[AlternativeArea] = []
+    for _, alt in candidates:
+        if alt.area_name in seen_areas:
+            continue
+        seen_areas.add(alt.area_name)
+        deduped.append(alt)
+        if len(deduped) >= top_n:
+            break
+
+    return deduped
+
+
 # ---------------------------------------------------------------------------
 # GET /api/map/hexagons
 # ---------------------------------------------------------------------------
@@ -287,6 +783,7 @@ def get_hexagons(
     area_type: str = Query("COMMERCIAL_AREA", regex="^(COMMERCIAL_AREA|ADMIN_DONG)$"),
     category: str | None = Query(None),
     qtr: str | None = Query(None),
+    mode: str | None = Query(None, regex="^(default|popup|timeslot|risk)$"),
     weight_type: str = Query("store", regex="^(store|area)$"),
     db: Session = Depends(get_db),
 ):
@@ -295,6 +792,8 @@ def get_hexagons(
     flow_qtr = qtr or qtrs.get("flow", "")
     store_qtr = qtr or qtrs.get("store", "")
     prev_sales_qtr = _prev_quarter(sales_qtr) if sales_qtr else ""
+
+    prev_store_qtr = _prev_quarter(store_qtr) if store_qtr else ""
 
     cat_filter_sales = ""
     cat_filter_store = ""
@@ -305,6 +804,7 @@ def get_hexagons(
         "prev_sales_qtr": prev_sales_qtr,
         "flow_qtr": flow_qtr,
         "store_qtr": store_qtr,
+        "prev_store_qtr": prev_store_qtr,
     }
     if category:
         cat_filter_sales = "AND s.cat_id = (SELECT cat_id FROM dim_category WHERE service_code = :cat)"
@@ -364,6 +864,12 @@ def get_hexagons(
             FROM fact_store_area_qtr
             WHERE qtr = :store_qtr {cat_filter_store.replace('st.', '')}
             GROUP BY area_id
+        ),
+        prev_store_agg AS (
+            SELECT area_id, SUM(store_cnt) as store_cnt
+            FROM fact_store_area_qtr
+            WHERE qtr = :prev_store_qtr {cat_filter_store.replace('st.', '')}
+            GROUP BY area_id
         )
         SELECT
             pa.h3_index,
@@ -376,22 +882,53 @@ def get_hexagons(
             COALESCE(st.store_cnt, 0)::int AS store_cnt,
             COALESCE(st.open_cnt, 0)::int AS open_cnt,
             COALESCE(st.close_cnt, 0)::int AS close_cnt,
-            ps.sales_amt AS prev_sales_amt
+            ps.sales_amt AS prev_sales_amt,
+            pst.store_cnt AS prev_store_cnt,
+            f.flow_by_hour,
+            f.flow_by_weekday
         FROM primary_area pa
         LEFT JOIN sales_agg s ON s.area_id = pa.area_id
         LEFT JOIN prev_sales_agg ps ON ps.area_id = pa.area_id
         LEFT JOIN fact_flow_area_qtr f ON f.area_id = pa.area_id AND f.qtr = :flow_qtr
         LEFT JOIN store_agg st ON st.area_id = pa.area_id
+        LEFT JOIN prev_store_agg pst ON pst.area_id = pa.area_id
     """)
 
     rows = db.execute(sql, params).fetchall()
 
     data = []
+    is_timeslot = mode == "timeslot"
+    is_risk = mode == "risk"
     for r in rows:
         lat, lng = h3.h3_to_geo(r.h3_index)
         cur = float(r.sales_amt) if r.sales_amt else None
         prev = float(r.prev_sales_amt) if r.prev_sales_amt else None
         sales_qoq = _safe_div(cur, prev)
+
+        peak_hour = None
+        peak_hour_ratio = None
+        weekday_ratio = None
+        if is_timeslot:
+            peak_hour, peak_hour_ratio, weekday_ratio = _compute_timeslot_summary(
+                r.flow_by_hour, r.flow_by_weekday,
+            )
+
+        # Risk score (M11-2)
+        hex_risk_score = None
+        hex_risk_level = None
+        if is_risk:
+            st_cnt = float(r.store_cnt) if r.store_cnt else None
+            cl_cnt = float(r.close_cnt) if r.close_cnt else None
+            prev_st = float(r.prev_store_cnt) if r.prev_store_cnt else None
+            cr = round(cl_cnt / st_cnt, 4) if cl_cnt and st_cnt and st_cnt > 0 else None
+            sg = _safe_div(st_cnt, prev_st)
+            cd = st_cnt  # competition density = absolute store count for this hex
+            hex_risk_score, hex_risk_level, _ = _calc_risk_score(
+                close_rate=cr,
+                store_growth=sg,
+                sales_growth=sales_qoq,
+                competition_density=cd,
+            )
 
         data.append(
             HexagonSummary(
@@ -408,16 +945,29 @@ def get_hexagons(
                 open_cnt=r.open_cnt or 0,
                 close_cnt=r.close_cnt or 0,
                 sales_qoq=sales_qoq,
+                peak_hour=peak_hour,
+                peak_hour_ratio=peak_hour_ratio,
+                weekday_ratio=weekday_ratio,
+                risk_score=hex_risk_score,
+                risk_level=hex_risk_level,
             )
         )
 
+    if is_risk:
+        data_asof = store_qtr
+    elif is_timeslot:
+        data_asof = flow_qtr
+    else:
+        data_asof = sales_qtr
+
     return HexagonsResponse(
         data=data,
-        data_asof=sales_qtr,
+        data_asof=data_asof,
         area_type=area_type,
         weight_type=weight_type,
         filters={
             "category": category,
+            "mode": mode,
             "qtr_sales": sales_qtr,
             "qtr_flow": flow_qtr,
             "qtr_store": store_qtr,
@@ -619,10 +1169,11 @@ def get_hexagon_detail(
     # Resolve area_ids from h3_index, filtered by area_type
     area_rows = db.execute(
         text("""
-            SELECT bw.area_id, da.area_name, da.area_type, bw.weight
+            SELECT bw.area_id, da.area_name, da.real_name, da.area_type, bw.weight
             FROM bridge_area_h3_weight bw
             JOIN dim_area da ON da.area_id = bw.area_id
             WHERE bw.h3_index = :h3 AND da.area_type = :area_type
+            ORDER BY bw.weight DESC
         """),
         {"h3": h3_index, "area_type": area_type},
     ).fetchall()
@@ -631,8 +1182,9 @@ def get_hexagon_detail(
         raise HTTPException(status_code=404, detail="H3 index not found in scope")
 
     area_ids = [r.area_id for r in area_rows]
-    area_names = [r.area_name for r in area_rows]
+    area_names = [r.real_name or r.area_name for r in area_rows]
     weights = {r.area_id: float(r.weight) for r in area_rows}
+    primary_area_name = area_names[0] if area_names else None
 
     # Fetch fact data for current + previous quarter
     cat_filter = ""
@@ -707,29 +1259,51 @@ def get_hexagon_detail(
     cur_open = _agg(store_rows, "open_cnt", store_qtr)
     cur_close = _agg(store_rows, "close_cnt", store_qtr)
 
-    close_rate = round(cur_close / cur_store, 4) if cur_close and cur_store and cur_store > 0 else None
+    store_display = int(round(cur_store)) if cur_store is not None else None
+    open_display = int(round(cur_open)) if cur_open is not None else None
+    close_display = int(round(cur_close)) if cur_close is not None else None
+
+    close_rate = (
+        round(close_display / store_display, 4)
+        if close_display and store_display and store_display > 0
+        else None
+    )
     comp_density = round(cur_store / len(area_ids), 2) if cur_store else None
+
+    # Growth rates
+    sales_growth = _safe_div(cur_sales, prev_sales)
+    flow_growth = _safe_div(cur_flow, prev_flow)
+    store_growth = _safe_div(cur_store, prev_store)
+
+    # Risk score (M11-1)
+    risk_score, risk_level, risk_decomposition = _calc_risk_score(
+        close_rate=close_rate,
+        store_growth=store_growth,
+        sales_growth=sales_growth,
+        competition_density=comp_density,
+    )
 
     # Risk warnings
     warnings: list[str] = []
     if close_rate and close_rate > 0.15:
         warnings.append("폐업률 15% 초과")
-    sales_growth = _safe_div(cur_sales, prev_sales)
     if sales_growth is not None and sales_growth < -0.1:
         warnings.append("매출 전분기 대비 10% 이상 감소")
-    flow_growth = _safe_div(cur_flow, prev_flow)
     if flow_growth is not None and flow_growth < -0.1:
         warnings.append("유동인구 전분기 대비 10% 이상 감소")
+    if risk_level == "High":
+        warnings.append(f"종합 리스크 점수 {risk_score}/100 (고위험)")
 
-    # Flow detail (merge from first available area — simplified)
-    flow_by_hour = None
-    flow_by_weekday = None
-    flow_by_demo = None
-    for r in flow_rows:
-        if r.qtr == flow_qtr:
-            flow_by_hour = flow_by_hour or r.flow_by_hour
-            flow_by_weekday = flow_by_weekday or r.flow_by_weekday
-            flow_by_demo = flow_by_demo or r.flow_by_demo
+    # Flow detail (weighted aggregation across areas)
+    flow_by_hour = _weighted_json_sum(
+        flow_rows, weights, flow_qtr, "flow_by_hour", HOUR_KEYS,
+    )
+    flow_by_weekday = _weighted_json_sum(
+        flow_rows, weights, flow_qtr, "flow_by_weekday", WEEKDAY_KEYS + WEEKEND_KEYS,
+    )
+    flow_by_demo = _weighted_json_sum(
+        flow_rows, weights, flow_qtr, "flow_by_demo", DEMO_KEYS,
+    )
 
     lat, lng = h3.h3_to_geo(h3_index)
 
@@ -737,7 +1311,7 @@ def get_hexagon_detail(
     rec = _build_recommendation(
         sales_growth=sales_growth,
         flow_growth=flow_growth,
-        store_growth=_safe_div(cur_store, prev_store),
+        store_growth=store_growth,
         close_rate=close_rate,
         comp_density=comp_density,
         cur_flow=cur_flow,
@@ -763,12 +1337,25 @@ def get_hexagon_detail(
     # --- Time Slot Recommendation (M6-4) ---
     time_slot_card = _build_time_slot(flow_by_hour, flow_by_weekday)
 
+    # --- Operating Strategy Card (M10-2) ---
+    operating_strategy_card = _build_operating_strategy(
+        flow_by_hour, flow_by_weekday, cur_flow,
+    )
+
+    # --- Alternative Areas (M11-3) ---
+    alternatives = _find_alternatives(
+        db, h3_index, area_type, category,
+        sales_qtr, store_qtr, flow_qtr,
+        current_risk_score=risk_score,
+    )
+
     return HexagonDetailResponse(
         h3_index=h3_index,
         lat=lat,
         lng=lng,
         qtr=sales_qtr,
         data_asof=sales_qtr,
+        primary_area_name=primary_area_name,
         areas=area_names,
         flow=FlowCard(
             flow_total=cur_flow,
@@ -781,27 +1368,32 @@ def get_hexagon_detail(
             sales_cnt=int(cur_sales_cnt) if cur_sales_cnt else None,
         ),
         competition=CompetitionCard(
-            store_cnt=int(cur_store) if cur_store else None,
-            open_cnt=int(cur_open) if cur_open else None,
-            close_cnt=int(cur_close) if cur_close else None,
+            store_cnt=store_display,
+            open_cnt=open_display,
+            close_cnt=close_display,
             close_rate=close_rate,
             competition_density=comp_density,
         ),
         growth=GrowthCard(
             sales_growth_rate=sales_growth,
             flow_growth_rate=flow_growth,
-            store_growth_rate=_safe_div(cur_store, prev_store),
+            store_growth_rate=store_growth,
         ),
         risk=RiskCard(
+            risk_score=risk_score,
+            risk_level=risk_level,
             close_rate=close_rate,
             competition_density=comp_density,
             warnings=warnings,
+            decomposition=risk_decomposition,
         ),
         recommendation=rec,
         trend=trend,
         facility=facility_card,
         demo=demo_card,
         time_slot=time_slot_card,
+        operating_strategy=operating_strategy_card,
+        alternatives=alternatives,
     )
 
 
@@ -903,15 +1495,22 @@ def compare_quarters(
     b_store = _wagg(store_rows, "store_cnt", req.qtr_before)
     b_open = _wagg(store_rows, "open_cnt", req.qtr_before)
     b_close = _wagg(store_rows, "close_cnt", req.qtr_before)
-    b_close_rate = round(b_close / b_store, 4) if b_close and b_store and b_store > 0 else None
+    b_store_display = int(round(b_store)) if b_store is not None else None
+    b_open_display = int(round(b_open)) if b_open is not None else None
+    b_close_display = int(round(b_close)) if b_close is not None else None
+    b_close_rate = (
+        round(b_close_display / b_store_display, 4)
+        if b_close_display and b_store_display and b_store_display > 0
+        else None
+    )
 
     before = ComparisonMetricSnapshot(
         sales_amt=b_sales,
         sales_cnt=int(b_sales_cnt) if b_sales_cnt else None,
         flow_total=b_flow,
-        store_cnt=int(b_store) if b_store else None,
-        open_cnt=int(b_open) if b_open else None,
-        close_cnt=int(b_close) if b_close else None,
+        store_cnt=b_store_display,
+        open_cnt=b_open_display,
+        close_cnt=b_close_display,
         close_rate=b_close_rate,
     )
 
@@ -922,15 +1521,22 @@ def compare_quarters(
     a_store = _wagg(store_rows, "store_cnt", req.qtr_after)
     a_open = _wagg(store_rows, "open_cnt", req.qtr_after)
     a_close = _wagg(store_rows, "close_cnt", req.qtr_after)
-    a_close_rate = round(a_close / a_store, 4) if a_close and a_store and a_store > 0 else None
+    a_store_display = int(round(a_store)) if a_store is not None else None
+    a_open_display = int(round(a_open)) if a_open is not None else None
+    a_close_display = int(round(a_close)) if a_close is not None else None
+    a_close_rate = (
+        round(a_close_display / a_store_display, 4)
+        if a_close_display and a_store_display and a_store_display > 0
+        else None
+    )
 
     after = ComparisonMetricSnapshot(
         sales_amt=a_sales,
         sales_cnt=int(a_sales_cnt) if a_sales_cnt else None,
         flow_total=a_flow,
-        store_cnt=int(a_store) if a_store else None,
-        open_cnt=int(a_open) if a_open else None,
-        close_cnt=int(a_close) if a_close else None,
+        store_cnt=a_store_display,
+        open_cnt=a_open_display,
+        close_cnt=a_close_display,
         close_rate=a_close_rate,
     )
 

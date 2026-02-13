@@ -14,7 +14,7 @@ from typing import Any
 from etl.collectors.seoul_api_collector import SeoulAPICollector, API_SERVICES
 from etl.db import execute_sql
 
-TARGET_QUARTERS = ["20244", "20243", "20242", "20241"]
+TARGET_QUARTERS = ["20253", "20252", "20251", "20244", "20243", "20242", "20241"]
 
 
 def get_seongsu_commercial_codes() -> set[str]:
@@ -58,12 +58,12 @@ def upsert_fact_flow(
         flow_total = row.get("TOT_FLPOP_CO")
         
         flow_by_hour = {
-            "00_06": row.get("TMZON_1_FLPOP_CO"),
-            "06_11": row.get("TMZON_2_FLPOP_CO"),
-            "11_14": row.get("TMZON_3_FLPOP_CO"),
-            "14_17": row.get("TMZON_4_FLPOP_CO"),
-            "17_21": row.get("TMZON_5_FLPOP_CO"),
-            "21_24": row.get("TMZON_6_FLPOP_CO"),
+            "00_06": row.get("TMZON_00_06_FLPOP_CO"),
+            "06_11": row.get("TMZON_06_11_FLPOP_CO"),
+            "11_14": row.get("TMZON_11_14_FLPOP_CO"),
+            "14_17": row.get("TMZON_14_17_FLPOP_CO"),
+            "17_21": row.get("TMZON_17_21_FLPOP_CO"),
+            "21_24": row.get("TMZON_21_24_FLPOP_CO"),
         }
         
         flow_by_weekday = {

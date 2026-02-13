@@ -23,6 +23,12 @@ class HexagonSummary(BaseModel):
     open_cnt: int | None = None
     close_cnt: int | None = None
     sales_qoq: float | None = None  # QoQ sales growth rate (ratio)
+    peak_hour: str | None = None  # peak time slot key e.g. "17_21"
+    peak_hour_ratio: float | None = None  # share of peak time slot flow / total
+    weekday_ratio: float | None = None  # weekday flow / (weekday + weekend) flow
+    # Risk mode (M11-2)
+    risk_score: float | None = None  # composite risk score 0-100
+    risk_level: str | None = None  # "High" | "Medium" | "Low"
 
 
 class HexagonsResponse(BaseModel):
@@ -61,10 +67,36 @@ class GrowthCard(BaseModel):
     store_growth_rate: float | None = None
 
 
+class RiskDecompositionItem(BaseModel):
+    """Single factor contributing to the composite risk score."""
+    factor: str  # "close_rate" | "store_growth" | "sales_decline" | "competition_density"
+    label: str  # "폐업률" | "점포 증가율" | "매출 감소" | "경쟁 밀도"
+    value: float | None = None  # raw metric value
+    score: float = 0  # normalized score 0-100
+    weight: float = 0  # factor weight (sum=1.0)
+    contribution: float = 0  # weight × score
+
+
 class RiskCard(BaseModel):
+    risk_score: float | None = None  # composite 0-100
+    risk_level: str | None = None  # "High" | "Medium" | "Low"
     close_rate: float | None = None
     competition_density: float | None = None
     warnings: list[str] = []
+    decomposition: list[RiskDecompositionItem] = []
+
+
+class AlternativeArea(BaseModel):
+    """A lower-risk alternative hexagon recommended as substitute."""
+    h3_index: str
+    area_name: str | None = None
+    risk_score: float
+    risk_level: str  # "High" | "Medium" | "Low"
+    flow_total: float | None = None
+    sales_amt: float | None = None
+    store_cnt: int | None = None
+    close_rate: float | None = None
+    sales_qoq: float | None = None
 
 
 class RecommendationCard(BaseModel):
@@ -129,12 +161,46 @@ class TimeSlotRecommendation(BaseModel):
     recommendations: list[TimeSlotItem] = []
 
 
+# ---------- Operating Strategy Card (M10-2) ----------
+
+class TimeSlotStrategy(BaseModel):
+    """Single time-slot operating strategy."""
+    hour_range: str  # "11~14"
+    label: str  # "점심"
+    flow_ratio: float  # share of total flow (0~1)
+    estimated_revenue_share: float  # estimated revenue contribution (유동 기반 추정)
+    staff_ratio: float  # relative staff allocation (avg=1.0, peak>1.0, off-peak<1.0)
+    is_peak: bool  # True if this slot is in peak group
+
+
+class WeekdayPattern(BaseModel):
+    """Weekday vs weekend flow pattern."""
+    weekday_flow_ratio: float | None = None  # 평일 유동 비중
+    weekend_flow_ratio: float | None = None  # 주말 유동 비중
+    peak_day: str | None = None  # 최고 유동 요일 ("월"~"일")
+    peak_day_flow: float | None = None  # 최고 요일 유동인구
+
+
+class OperatingStrategyCard(BaseModel):
+    """Operating strategy recommendations based on time-slot flow patterns."""
+    recommended_open: str  # "06:00"
+    recommended_close: str  # "24:00"
+    recommended_hours: int  # 권장 영업 시간 수
+    peak_slots: list[TimeSlotStrategy] = []  # top 2~3 slots (피크)
+    off_peak_slots: list[TimeSlotStrategy] = []  # bottom slots (오프피크)
+    all_slots: list[TimeSlotStrategy] = []  # all 6 slots ordered by time
+    weekday_pattern: WeekdayPattern | None = None
+    total_flow: float | None = None  # 총 유동인구
+    assumptions: list[str] = []  # 가정 목록
+
+
 class HexagonDetailResponse(BaseModel):
     h3_index: str
     lat: float
     lng: float
     qtr: str
     data_asof: str
+    primary_area_name: str | None = None
     areas: list[str]
     flow: FlowCard
     sales: SalesCard
@@ -146,6 +212,9 @@ class HexagonDetailResponse(BaseModel):
     facility: FacilityCard | None = None
     demo: DemoCard | None = None
     time_slot: TimeSlotRecommendation | None = None
+    operating_strategy: OperatingStrategyCard | None = None
+    # Risk decomposition + alternatives (M11-3)
+    alternatives: list[AlternativeArea] = []
 
 
 # ---------- /api/map/compare ----------
