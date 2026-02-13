@@ -1,7 +1,7 @@
 "use client";
 
+import { useRef, useEffect } from "react";
 import { useMapStore } from "@/store/mapStore";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -18,6 +18,8 @@ import DemoCard from "./DemoCard";
 import TimeSlotCard from "./TimeSlotCard";
 import ComparisonCard from "./ComparisonCard";
 import SocialBuzzCard from "./SocialBuzzCard";
+import OperatingStrategyCard from "./OperatingStrategyCard";
+import AlternativeAreasCard from "./AlternativeAreasCard";
 
 // Icons as simple SVGs
 const FlowIcon = () => (
@@ -64,15 +66,25 @@ const WEEKDAY_LABELS: Record<string, string> = {
   "5": "금",
   "6": "토",
   "7": "일",
+  mon: "월",
+  tue: "화",
+  wed: "수",
+  thu: "목",
+  fri: "금",
+  sat: "토",
+  sun: "일",
 };
 
 export default function Sidebar() {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
   const {
     sidebarOpen,
     hexDetail,
     hexDetailLoading,
     selectedAreaName,
     selectedRealName,
+    selectedHex,
     closeSidebar,
     comparisonMode,
     comparisonData,
@@ -81,6 +93,12 @@ export default function Sidebar() {
     socialData,
     socialLoading,
   } = useMapStore();
+
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
+  }, [selectedHex]);
 
   if (!sidebarOpen) return null;
 
@@ -109,7 +127,10 @@ export default function Sidebar() {
       </div>
 
       {/* Content */}
-      <ScrollArea className="flex-1">
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto"
+      >
         <div className="space-y-3 p-4">
           {comparisonMode ? (
             /* === Comparison Mode === */
@@ -277,38 +298,126 @@ export default function Sidebar() {
                 </div>
               </MetricCard>
 
-              {/* Risk Card */}
+              {/* Risk Card (M11-6 확장) */}
               <MetricCard
-                title="리스크"
+                title="리스크 진단"
                 icon={<RiskIcon />}
                 variant={
-                  hexDetail.risk.warnings.length > 0 ? "warning" : "default"
+                  hexDetail.risk.risk_level === "High" ? "danger"
+                    : hexDetail.risk.risk_level === "Medium" ? "warning"
+                    : "default"
                 }
               >
-                <StatRow
-                  label="폐업률"
-                  value={
-                    hexDetail.risk.close_rate !== null
-                      ? `${(hexDetail.risk.close_rate * 100).toFixed(1)}%`
-                      : null
-                  }
-                />
-                <StatRow
-                  label="경쟁 밀도"
-                  value={
-                    hexDetail.risk.competition_density !== null
-                      ? hexDetail.risk.competition_density.toFixed(2)
-                      : null
-                  }
-                  unit="점포/hex"
-                />
+                {/* Risk Score Gauge */}
+                {hexDetail.risk.risk_score !== null && (
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl font-bold text-slate-900 dark:text-white">
+                          {hexDetail.risk.risk_score.toFixed(1)}
+                        </span>
+                        <span className="text-xs text-slate-500 dark:text-white/40">/100</span>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={`text-xs font-semibold ${
+                          hexDetail.risk.risk_level === "High"
+                            ? "border-red-500/50 bg-red-500/10 text-red-500 dark:text-red-400"
+                            : hexDetail.risk.risk_level === "Medium"
+                              ? "border-amber-500/50 bg-amber-500/10 text-amber-500 dark:text-amber-400"
+                              : "border-emerald-500/50 bg-emerald-500/10 text-emerald-500 dark:text-emerald-400"
+                        }`}
+                      >
+                        {hexDetail.risk.risk_level === "High" ? "고위험"
+                          : hexDetail.risk.risk_level === "Medium" ? "주의"
+                          : "양호"}
+                      </Badge>
+                    </div>
+                    {/* Gauge bar */}
+                    <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          width: `${hexDetail.risk.risk_score}%`,
+                          background: hexDetail.risk.risk_score >= 67
+                            ? "linear-gradient(to right, #ef4444, #dc2626)"
+                            : hexDetail.risk.risk_score >= 34
+                              ? "linear-gradient(to right, #f59e0b, #d97706)"
+                              : "linear-gradient(to right, #22c55e, #16a34a)",
+                        }}
+                      />
+                    </div>
+                    <div className="mt-1 flex justify-between text-[9px] text-slate-400 dark:text-white/30">
+                      <span>Low</span>
+                      <span>Medium</span>
+                      <span>High</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Decomposition bar chart */}
+                {hexDetail.risk.decomposition.length > 0 && (
+                  <div className="mt-1">
+                    <p className="mb-2 text-[10px] font-medium text-slate-500 dark:text-white/40">원인 분해</p>
+                    <div className="space-y-2">
+                      {hexDetail.risk.decomposition
+                        .sort((a, b) => b.contribution - a.contribution)
+                        .map((d) => {
+                          const pct = hexDetail.risk.risk_score && hexDetail.risk.risk_score > 0
+                            ? (d.contribution / hexDetail.risk.risk_score) * 100
+                            : 0;
+                          return (
+                            <div key={d.factor}>
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-slate-600 dark:text-white/60">{d.label}</span>
+                                <span className="font-medium text-slate-900 dark:text-white">
+                                  {pct.toFixed(1)}%
+                                </span>
+                              </div>
+                              <div className="mt-0.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
+                                <div
+                                  className="h-full rounded-full transition-all duration-300"
+                                  style={{
+                                    width: `${Math.min(100, pct)}%`,
+                                    backgroundColor: d.score >= 67 ? "#ef4444"
+                                      : d.score >= 34 ? "#f59e0b"
+                                      : "#22c55e",
+                                  }}
+                                />
+                              </div>
+                              <div className="mt-0.5 flex justify-between text-[9px] text-slate-400 dark:text-white/25">
+                                <span>
+                                  {d.value !== null
+                                    ? d.factor === "close_rate" || d.factor === "store_growth" || d.factor === "sales_decline"
+                                      ? `${(d.value * 100).toFixed(1)}%`
+                                      : d.value.toFixed(1)
+                                    : "—"}
+                                </span>
+                                <span>점수 {d.score.toFixed(0)}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Warnings */}
                 <WarningList warnings={hexDetail.risk.warnings} />
-                {hexDetail.risk.warnings.length === 0 && (
+                {hexDetail.risk.warnings.length === 0 && hexDetail.risk.risk_level !== "High" && (
                   <p className="mt-2 text-xs text-emerald-600/80 dark:text-emerald-400/80">
                     특별한 위험 신호 없음
                   </p>
                 )}
               </MetricCard>
+
+              {/* Alternative Areas Card (M11-7) */}
+              {hexDetail.alternatives && hexDetail.alternatives.length > 0 && (
+                <AlternativeAreasCard
+                  alternatives={hexDetail.alternatives}
+                  currentRiskScore={hexDetail.risk.risk_score}
+                />
+              )}
 
               {/* Recommendation Card (6th) */}
               <MetricCard
@@ -388,9 +497,18 @@ export default function Sidebar() {
                 <DemoCard data={hexDetail.demo} />
               )}
 
-              {/* TimeSlot Card (M7-4) */}
+              {/* TimeSlot Card (M7-4, M10-5 확장) */}
               {hexDetail.time_slot && (
-                <TimeSlotCard data={hexDetail.time_slot} />
+                <TimeSlotCard
+                  data={hexDetail.time_slot}
+                  flow={hexDetail.flow}
+                  operatingStrategy={hexDetail.operating_strategy}
+                />
+              )}
+
+              {/* Operating Strategy Card (M10-6) */}
+              {hexDetail.operating_strategy && (
+                <OperatingStrategyCard data={hexDetail.operating_strategy} />
               )}
 
               {/* Social Buzz Card (M9) */}
@@ -408,7 +526,7 @@ export default function Sidebar() {
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
