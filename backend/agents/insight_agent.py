@@ -149,6 +149,9 @@ def insight_agent_node(state: dict[str, Any]) -> dict[str, Any]:
     user_content = f"질문: {question}"
     
     if selected_hex_detail:
+        primary_area_name = selected_hex_detail.get("primary_area_name")
+        if primary_area_name:
+            user_content += f"\n\n선택한 상권명: {primary_area_name}"
         user_content += (
             "\n\n선택한 상권 카드 데이터(요약 카드):\n"
             f"{json.dumps(selected_hex_detail, ensure_ascii=False, default=str)}"

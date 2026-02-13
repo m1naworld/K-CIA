@@ -255,6 +255,211 @@ LIMIT 20
 
 Comparison keywords: 대비, 비교, 변화, 전분기, 전년동기, 증감, 증가, 감소, 전 분기, 이전 분기
 
+## Time Slot / Weekday Analysis (시간대/요일/피크타임/운영전략)
+
+### Natural language → JSONB key mapping
+
+Time slot keywords (user may say → JSONB key):
+- 새벽, 심야, 야간(후반), 0시~6시 → '00_06'
+- 오전, 아침, 출근, 6시~11시 → '06_11'
+- 점심, 낮, 11시~14시 → '11_14'
+- 오후, 14시~17시, 3시~5시 → '14_17'
+- 저녁, 퇴근, 17시~21시 → '17_21'
+- 밤, 야간(전반), 21시~24시 → '21_24'
+
+Weekday keywords:
+- 평일 = mon + tue + wed + thu + fri
+- 주말 = sat + sun
+- 월요일 → 'mon', 화요일 → 'tue', 수요일 → 'wed', 목요일 → 'thu', 금요일 → 'fri', 토요일 → 'sat', 일요일 → 'sun'
+
+Topic keywords (trigger time-slot/weekday analysis):
+피크타임, 피크, 오프피크, 시간대, 시간별, 운영시간, 영업시간, 인력, 인력배분, 스케줄, 언제, 몇시, 요일, 평일, 주말, 야간, 심야, 새벽, 오전, 오후, 점심, 저녁, 밤, 출근, 퇴근
+
+### Example 1: 특정 시간대 유동인구 (e.g., "오후 3~5시 유동인구")
+SELECT da.area_name,
+       (ff.flow_by_hour->>'14_17')::numeric AS flow_14_17,
+       ff.flow_total,
+       ROUND((ff.flow_by_hour->>'14_17')::numeric / NULLIF(ff.flow_total, 0) * 100, 1) AS pct_of_total
+FROM fact_flow_area_qtr ff
+JOIN dim_area da ON ff.area_id = da.area_id
+WHERE ff.qtr = '20244'
+  AND ff.area_id IN (SELECT area_id FROM preset_area_scope)
+ORDER BY flow_14_17 DESC
+LIMIT 10
+
+### Example 2: 피크 시간대 찾기 ("피크타임 어디가 가장 활발해?")
+SELECT da.area_name,
+       (ff.flow_by_hour->>'00_06')::numeric AS h_00_06,
+       (ff.flow_by_hour->>'06_11')::numeric AS h_06_11,
+       (ff.flow_by_hour->>'11_14')::numeric AS h_11_14,
+       (ff.flow_by_hour->>'14_17')::numeric AS h_14_17,
+       (ff.flow_by_hour->>'17_21')::numeric AS h_17_21,
+       (ff.flow_by_hour->>'21_24')::numeric AS h_21_24,
+       GREATEST(
+         (ff.flow_by_hour->>'00_06')::numeric,
+         (ff.flow_by_hour->>'06_11')::numeric,
+         (ff.flow_by_hour->>'11_14')::numeric,
+         (ff.flow_by_hour->>'14_17')::numeric,
+         (ff.flow_by_hour->>'17_21')::numeric,
+         (ff.flow_by_hour->>'21_24')::numeric
+       ) AS peak_flow
+FROM fact_flow_area_qtr ff
+JOIN dim_area da ON ff.area_id = da.area_id
+WHERE ff.qtr = '20244'
+  AND ff.area_id IN (SELECT area_id FROM preset_area_scope)
+ORDER BY peak_flow DESC
+LIMIT 10
+
+### Example 3: 주말 vs 평일 비교 ("주말 vs 평일 유동인구 비교")
+SELECT da.area_name,
+       ((ff.flow_by_weekday->>'mon')::numeric +
+        (ff.flow_by_weekday->>'tue')::numeric +
+        (ff.flow_by_weekday->>'wed')::numeric +
+        (ff.flow_by_weekday->>'thu')::numeric +
+        (ff.flow_by_weekday->>'fri')::numeric) AS weekday_total,
+       ((ff.flow_by_weekday->>'sat')::numeric +
+        (ff.flow_by_weekday->>'sun')::numeric) AS weekend_total,
+       ROUND(
+         ((ff.flow_by_weekday->>'sat')::numeric + (ff.flow_by_weekday->>'sun')::numeric) /
+         NULLIF((ff.flow_by_weekday->>'mon')::numeric + (ff.flow_by_weekday->>'tue')::numeric +
+                (ff.flow_by_weekday->>'wed')::numeric + (ff.flow_by_weekday->>'thu')::numeric +
+                (ff.flow_by_weekday->>'fri')::numeric, 0) * 100, 1
+       ) AS weekend_vs_weekday_pct
+FROM fact_flow_area_qtr ff
+JOIN dim_area da ON ff.area_id = da.area_id
+WHERE ff.qtr = '20244'
+  AND ff.area_id IN (SELECT area_id FROM preset_area_scope)
+ORDER BY weekend_vs_weekday_pct DESC
+LIMIT 10
+
+### Example 4: 시간대별 매출 기여 추정 (매출은 분기 총액만 있으므로 유동 비중으로 추정)
+"저녁 시간대 매출 기여 비중" → 유동인구 비중으로 대체 추정
+SELECT da.area_name,
+       fs.sales_amt AS quarterly_sales,
+       ROUND((ff.flow_by_hour->>'17_21')::numeric / NULLIF(ff.flow_total, 0) * 100, 1) AS evening_flow_pct,
+       ROUND(fs.sales_amt * (ff.flow_by_hour->>'17_21')::numeric / NULLIF(ff.flow_total, 0)) AS estimated_evening_sales
+FROM fact_sales_area_qtr fs
+JOIN dim_area da ON fs.area_id = da.area_id
+JOIN dim_category dc ON fs.cat_id = dc.cat_id
+LEFT JOIN fact_flow_area_qtr ff ON fs.area_id = ff.area_id AND ff.qtr = fs.qtr
+WHERE dc.service_name = '커피-음료' AND fs.qtr = '20244'
+  AND fs.area_id IN (SELECT area_id FROM preset_area_scope)
+ORDER BY estimated_evening_sales DESC
+LIMIT 10
+
+NOTE: D1 매출 데이터는 분기 총액만 제공합니다. 시간대별 매출은 유동인구 비중으로 추정합니다.
+결과에 "유동인구 기반 추정치"임을 명시하세요.
+
+## Risk / Competition / Closure Analysis (리스크/경쟁/폐업/과밀 분석)
+
+### Topic keywords (trigger risk analysis):
+리스크, 폐업, 폐업률, 경쟁, 과밀, 위험, 포화, 생존율, 개폐업, 개업, 경쟁밀도, 경쟁강도, 포화도, 안전한, 위험한
+
+### Key metrics
+- 폐업률 = close_cnt / NULLIF(store_cnt, 0) * 100
+- 개업률 = open_cnt / NULLIF(store_cnt, 0) * 100
+- 순증감 = open_cnt - close_cnt
+- 경쟁 밀도 = 특정 업종 store_cnt (상대적 비교용)
+- 매출 QoQ = (current_sales - prev_sales) / NULLIF(prev_sales, 0) * 100
+
+### Example 1: 폐업률 추세 (분기별 폐업수/점포수 변화)
+"이 업종 폐업률 추이", "커피 전문점 폐업 추세"
+SELECT da.area_name, fst.qtr,
+       fst.store_cnt, fst.open_cnt, fst.close_cnt,
+       ROUND(fst.close_cnt::numeric / NULLIF(fst.store_cnt, 0) * 100, 1) AS close_rate_pct,
+       fst.open_cnt - fst.close_cnt AS net_change
+FROM fact_store_area_qtr fst
+JOIN dim_area da ON fst.area_id = da.area_id
+JOIN dim_category dc ON fst.cat_id = dc.cat_id
+WHERE dc.service_name = '커피-음료'
+  AND fst.area_id IN (SELECT area_id FROM preset_area_scope)
+ORDER BY da.area_name, fst.qtr
+LIMIT 200
+
+### Example 2: 경쟁 밀도 비교 (상권별 업종 점포수 순위)
+"어디가 카페 경쟁 가장 치열해?", "디저트 가게 많은 상권"
+SELECT da.area_name, dc.service_name,
+       fst.store_cnt,
+       ROUND(fst.close_cnt::numeric / NULLIF(fst.store_cnt, 0) * 100, 1) AS close_rate_pct,
+       fst.open_cnt, fst.close_cnt
+FROM fact_store_area_qtr fst
+JOIN dim_area da ON fst.area_id = da.area_id
+JOIN dim_category dc ON fst.cat_id = dc.cat_id
+WHERE fst.qtr = '20251'
+  AND fst.area_id IN (SELECT area_id FROM preset_area_scope)
+ORDER BY fst.store_cnt DESC
+LIMIT 20
+
+### Example 3: 리스크 랭킹 — 폐업률 + 매출감소 복합 (위험 구역 식별)
+"가장 위험한 상권", "리스크 높은 곳", "카페 창업하면 안 되는 곳"
+WITH store_risk AS (
+    SELECT fst.area_id, da.area_name,
+           fst.store_cnt, fst.close_cnt,
+           ROUND(fst.close_cnt::numeric / NULLIF(fst.store_cnt, 0) * 100, 1) AS close_rate_pct
+    FROM fact_store_area_qtr fst
+    JOIN dim_area da ON fst.area_id = da.area_id
+    JOIN dim_category dc ON fst.cat_id = dc.cat_id
+    WHERE dc.service_name = '커피-음료' AND fst.qtr = '20251'
+      AND fst.area_id IN (SELECT area_id FROM preset_area_scope)
+),
+sales_change AS (
+    SELECT fs.area_id,
+           SUM(CASE WHEN fs.qtr = '20251' THEN fs.sales_amt END) AS cur_sales,
+           SUM(CASE WHEN fs.qtr = '20244' THEN fs.sales_amt END) AS prev_sales
+    FROM fact_sales_area_qtr fs
+    JOIN dim_category dc ON fs.cat_id = dc.cat_id
+    WHERE dc.service_name = '커피-음료' AND fs.qtr IN ('20251', '20244')
+      AND fs.area_id IN (SELECT area_id FROM preset_area_scope)
+    GROUP BY fs.area_id
+)
+SELECT sr.area_name, sr.store_cnt, sr.close_rate_pct,
+       ROUND((sc.cur_sales - sc.prev_sales) / NULLIF(sc.prev_sales, 0) * 100, 1) AS sales_qoq_pct,
+       sr.close_rate_pct + ABS(LEAST(0, ROUND((sc.cur_sales - sc.prev_sales) / NULLIF(sc.prev_sales, 0) * 100, 1))) AS risk_composite
+FROM store_risk sr
+LEFT JOIN sales_change sc ON sr.area_id = sc.area_id
+ORDER BY risk_composite DESC NULLS LAST
+LIMIT 20
+
+### Example 4: 포화도 분석 (점포당 매출 + 점포 증감)
+"카페 포화 상태인 곳", "점포당 매출 낮은 상권", "과밀한 업종"
+SELECT da.area_name,
+       fst.store_cnt, fst.open_cnt, fst.close_cnt,
+       fs.sales_amt,
+       ROUND(fs.sales_amt / NULLIF(fst.store_cnt, 0)) AS sales_per_store,
+       fst.open_cnt - fst.close_cnt AS net_store_change
+FROM fact_store_area_qtr fst
+JOIN dim_area da ON fst.area_id = da.area_id
+JOIN dim_category dc ON fst.cat_id = dc.cat_id
+LEFT JOIN fact_sales_area_qtr fs ON fst.area_id = fs.area_id AND fst.qtr = fs.qtr AND fst.cat_id = fs.cat_id
+WHERE dc.service_name = '커피-음료' AND fst.qtr = '20251'
+  AND fst.area_id IN (SELECT area_id FROM preset_area_scope)
+ORDER BY sales_per_store ASC NULLS LAST
+LIMIT 20
+
+### Example 5: 특정 구역 리스크 원인 분석
+"이 구역 디저트 업종 리스크 높은 이유", "왜 폐업이 많아?"
+→ 해당 구역의 폐업률, 점포 증감, 매출 변화, 경쟁 밀도를 모두 조회하여 원인 파악
+SELECT da.area_name, dc.service_name,
+       fst.store_cnt, fst.open_cnt, fst.close_cnt,
+       ROUND(fst.close_cnt::numeric / NULLIF(fst.store_cnt, 0) * 100, 1) AS close_rate_pct,
+       fst.open_cnt - fst.close_cnt AS net_change,
+       fs.sales_amt,
+       ROUND(fs.sales_amt / NULLIF(fst.store_cnt, 0)) AS sales_per_store,
+       ff.flow_total
+FROM fact_store_area_qtr fst
+JOIN dim_area da ON fst.area_id = da.area_id
+JOIN dim_category dc ON fst.cat_id = dc.cat_id
+LEFT JOIN fact_sales_area_qtr fs ON fst.area_id = fs.area_id AND fst.qtr = fs.qtr AND fst.cat_id = fs.cat_id
+LEFT JOIN fact_flow_area_qtr ff ON fst.area_id = ff.area_id AND ff.qtr = fst.qtr
+WHERE da.area_name LIKE '%성수%'
+  AND fst.qtr = '20251'
+  AND fst.area_id IN (SELECT area_id FROM preset_area_scope)
+ORDER BY close_rate_pct DESC
+LIMIT 20
+
+NOTE: 높은 폐업률 + 낮은 점포당 매출 + 점포 순감소는 과밀/포화 위험 신호입니다.
+경쟁 밀도는 동일 업종 store_cnt를 상권 간 비교하여 판단합니다.
+
 ## Rules
 1. SELECT only. No DDL/DML.
 2. Always filter to 성수동 using: WHERE area_id IN (SELECT area_id FROM preset_area_scope)

@@ -37,6 +37,33 @@ Respond with ONLY a JSON object: {"route": "sql"|"insight"|"both"}
 """
 
 
+SQL_FORCE_KEYWORDS = [
+    "top",
+    "top3",
+    "top 3",
+    "top5",
+    "top 5",
+    "순위",
+    "랭킹",
+    "상위",
+    "가장",
+    "비교",
+    "대비",
+    "vs",
+    "전분기",
+    "전년",
+    "추이",
+    "변화",
+    "전체",
+    "성수동에서",
+]
+
+
+def _needs_sql(question: str) -> bool:
+    q = question.lower()
+    return any(keyword in q for keyword in SQL_FORCE_KEYWORDS)
+
+
 def route_query(question: str) -> str:
     """Classify a question and return route: 'sql', 'insight', or 'both'."""
     llm = ChatOpenAI(model="gpt-4o", temperature=0)
@@ -57,5 +84,8 @@ def route_query(question: str) -> str:
 def supervisor_node(state: dict[str, Any]) -> dict[str, Any]:
     """LangGraph node: determine route for the question."""
     question = state["question"]
+    selected_hex_detail = state.get("selected_hex_detail")
+    if selected_hex_detail and not _needs_sql(question):
+        return {"route": "insight"}
     route = route_query(question)
     return {"route": route}
