@@ -150,10 +150,11 @@ export default function OperatingStrategyCard({ data }: Props) {
         <p className="mb-1.5 text-[10px] font-medium text-slate-500 dark:text-white/40">
           시간대별 인력 배분
         </p>
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           {data.all_slots.map((slot) => {
-            const maxRatio = Math.max(...data.all_slots.map((s) => s.staff_ratio));
-            const barWidth = maxRatio > 0 ? (slot.staff_ratio / maxRatio) * 100 : 0;
+            // x1.0 = 60%, x1.5 = 80%, x2.0 = 100% 선형 스케일
+            const baseWidth = Math.max(0, slot.staff_ratio) * 50;
+            const barWidth = Math.min(100, Math.max(25, baseWidth));
             return (
               <div key={slot.hour_range} className="flex items-center gap-2">
                 <Badge
@@ -166,20 +167,20 @@ export default function OperatingStrategyCard({ data }: Props) {
                 >
                   {slot.label}
                 </Badge>
-                <div className="relative h-4 flex-1 overflow-hidden rounded-full border border-slate-300/70 bg-slate-200 dark:border-white/15 dark:bg-slate-900/60">
+                <div className="relative h-4 flex-1 overflow-hidden rounded-full border border-slate-300 dark:border-slate-600 bg-slate-200 dark:bg-slate-800">
                   <div
-                    className={`h-full rounded-full shadow-sm transition-all ${
+                    className={`h-full rounded-full transition-all ${
                       slot.is_peak
-                        ? "bg-amber-500 ring-1 ring-amber-400/70 dark:bg-amber-400 dark:ring-amber-300/70"
-                        : "bg-slate-500 ring-1 ring-slate-400/60 dark:bg-slate-300/70 dark:ring-white/30"
+                        ? "bg-gradient-to-r from-amber-400 to-amber-500"
+                        : "bg-gradient-to-r from-slate-400 to-slate-500 dark:from-slate-500 dark:to-slate-600"
                     }`}
-                    style={{ width: `${barWidth}%`, minWidth: barWidth > 0 ? "6px" : "0px" }}
+                    style={{ width: `${barWidth}%` }}
                   />
                 </div>
-                <span className="w-8 text-right text-[10px] font-medium text-slate-600 dark:text-white/50">
+                <span className="w-8 text-right text-[10px] font-medium text-slate-600 dark:text-white/60">
                   x{slot.staff_ratio.toFixed(1)}
                 </span>
-                <span className="w-8 text-right text-[10px] text-slate-400 dark:text-white/30">
+                <span className="w-8 text-right text-[10px] text-slate-400 dark:text-white/40">
                   {(slot.estimated_revenue_share * 100).toFixed(0)}%
                 </span>
               </div>
