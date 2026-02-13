@@ -157,6 +157,134 @@ function getFlowColorScale(
   }
 }
 
+/**
+ * Color scale for peak-hour flow ratio (timeslot mode).
+ * Low concentration (balanced) → cool blue, High concentration (one slot dominates) → hot red.
+ * @param ratio - peak hour ratio (0~1), typically 0.1~0.4 range
+ */
+function getTimeslotColorScale(
+  ratio: number | null,
+  isDark: boolean
+): [number, number, number] {
+  if (ratio === null || ratio === undefined || !Number.isFinite(ratio)) {
+    return isDark ? [60, 60, 80] : [120, 120, 150];
+  }
+  // Normalize: typical range 0.12~0.35 → map to 0~1
+  const clamped = Math.max(0.10, Math.min(0.40, ratio));
+  const t = (clamped - 0.10) / 0.30; // 0~1
+
+  if (t < 0.33) {
+    // Cool blue zone (balanced traffic)
+    const s = t / 0.33;
+    return isDark
+      ? [
+        Math.round(30 + s * 20),
+        Math.round(80 + s * 60),
+        Math.round(180 + s * 40),
+      ]
+      : [
+        Math.round(40 + s * 20),
+        Math.round(100 + s * 50),
+        Math.round(200 + s * 20),
+      ];
+  } else if (t < 0.66) {
+    // Warm zone (moderate concentration)
+    const s = (t - 0.33) / 0.33;
+    return isDark
+      ? [
+        Math.round(50 + s * 180),
+        Math.round(140 + s * 40),
+        Math.round(220 - s * 140),
+      ]
+      : [
+        Math.round(60 + s * 170),
+        Math.round(150 + s * 30),
+        Math.round(220 - s * 140),
+      ];
+  } else {
+    // Hot red zone (highly concentrated peak)
+    const s = (t - 0.66) / 0.34;
+    return isDark
+      ? [
+        Math.round(230 + s * 25),
+        Math.round(180 - s * 120),
+        Math.round(80 - s * 50),
+      ]
+      : [
+        Math.round(230 + s * 25),
+        Math.round(150 - s * 100),
+        Math.round(60 - s * 30),
+      ];
+  }
+}
+
+/**
+ * Color scale for risk score (0-100).
+ * Low risk → green, Medium → yellow, High → red.
+ */
+function getRiskColorScale(
+  score: number | null,
+  isDark: boolean
+): [number, number, number] {
+  if (score === null || score === undefined || !Number.isFinite(score)) {
+    return isDark ? [60, 60, 80] : [120, 120, 150];
+  }
+  const t = Math.max(0, Math.min(1, score / 100));
+
+  if (t < 0.33) {
+    // Green zone (low risk)
+    const s = t / 0.33;
+    return isDark
+      ? [
+        Math.round(30 + s * 50),
+        Math.round(180 + s * 40),
+        Math.round(60 + s * 10),
+      ]
+      : [
+        Math.round(40 + s * 60),
+        Math.round(180 + s * 30),
+        Math.round(60 + s * 10),
+      ];
+  } else if (t < 0.66) {
+    // Yellow zone (medium risk)
+    const s = (t - 0.33) / 0.33;
+    return isDark
+      ? [
+        Math.round(80 + s * 170),
+        Math.round(220 - s * 50),
+        Math.round(70 - s * 40),
+      ]
+      : [
+        Math.round(100 + s * 150),
+        Math.round(210 - s * 50),
+        Math.round(70 - s * 40),
+      ];
+  } else {
+    // Red zone (high risk)
+    const s = (t - 0.66) / 0.34;
+    return isDark
+      ? [
+        Math.round(250 - s * 20),
+        Math.round(170 - s * 120),
+        Math.round(30 + s * 10),
+      ]
+      : [
+        Math.round(250 - s * 30),
+        Math.round(160 - s * 110),
+        Math.round(30 + s * 10),
+      ];
+  }
+}
+
+const PEAK_HOUR_LABELS: Record<string, string> = {
+  "00_06": "새벽 (0~6시)",
+  "06_11": "오전 (6~11시)",
+  "11_14": "점심 (11~14시)",
+  "14_17": "오후 (14~17시)",
+  "17_21": "저녁 (17~21시)",
+  "21_24": "야간 (21~24시)",
+};
+
 // 행정동별 색상
 const DONG_COLORS: Record<string, string> = {
   "성수1가1동": "#6366f1", // indigo
@@ -337,6 +465,8 @@ export default function HexMap() {
     const params = new URLSearchParams({ area_type: "COMMERCIAL_AREA" });
     if (category && category !== "all") params.set("category", category);
     if (quarter && quarter !== "latest") params.set("qtr", quarter);
+    if (elevationMetric === "timeslot") params.set("mode", "timeslot");
+    if (elevationMetric === "risk") params.set("mode", "risk");
     fetch(`${apiUrl}/api/map/hexagons?${params}`)
       .then((res) => res.json())
       .then((json) => {
@@ -347,14 +477,15 @@ export default function HexMap() {
         setData([]);
         setLoading(false);
       });
-  }, [category, quarter]);
+  }, [category, quarter, elevationMetric]);
 
   const elevationRange = useMemo(() => {
     if (data.length === 0) return { min: 0, max: 1 };
     const commercial = data.filter((d) => d.area_name !== null);
     if (commercial.length === 0) return { min: 0, max: 1 };
+    // risk mode: height = sales, timeslot/flow: height = flow_total
     const values = commercial
-      .map((d) => (elevationMetric === "flow" ? d.flow_total : d.sales_amt))
+      .map((d) => (elevationMetric === "sales" || elevationMetric === "risk" ? d.sales_amt : d.flow_total))
       .filter((v) => v !== null && v !== undefined && Number.isFinite(v));
     if (values.length === 0) return { min: 0, max: 1 };
     return { min: Math.min(...values), max: Math.max(...values) };
@@ -378,15 +509,21 @@ export default function HexMap() {
               ? [50, 50, 50, 30] as [number, number, number, number]
               : [100, 100, 100, 40] as [number, number, number, number];
           }
-          const [r, g, b] =
-            elevationMetric === "flow"
-              ? getFlowColorScale(
-                d.flow_total,
-                elevationRange.min,
-                elevationRange.max,
-                isDark
-              )
-              : getQoQColorScale(d.sales_qoq, isDark);
+          let r: number, g: number, b: number;
+          if (elevationMetric === "risk") {
+            [r, g, b] = getRiskColorScale(d.risk_score, isDark);
+          } else if (elevationMetric === "timeslot") {
+            [r, g, b] = getTimeslotColorScale(d.peak_hour_ratio, isDark);
+          } else if (elevationMetric === "flow") {
+            [r, g, b] = getFlowColorScale(
+              d.flow_total,
+              elevationRange.min,
+              elevationRange.max,
+              isDark
+            );
+          } else {
+            [r, g, b] = getQoQColorScale(d.sales_qoq, isDark);
+          }
           // Highlight selected area
           if (selectedAreaId !== null && d.area_id === selectedAreaId) {
             return [
@@ -416,7 +553,8 @@ export default function HexMap() {
           if (d.area_name === null) {
             return 2;
           }
-          const value = elevationMetric === "flow" ? d.flow_total : d.sales_amt;
+          // risk mode: height = sales, timeslot/flow: height = flow
+          const value = elevationMetric === "sales" || elevationMetric === "risk" ? d.sales_amt : d.flow_total;
           if (value === null || value === undefined || !Number.isFinite(value)) return 10;
           const { min, max } = elevationRange;
           const normalized =
@@ -680,7 +818,46 @@ export default function HexMap() {
               ({hoverInfo.object.area_name})
             </p>
           )}
-          {hoverInfo.object.area_name !== null && (
+          {hoverInfo.object.area_name !== null && elevationMetric === "timeslot" && (
+            <>
+              <p className="text-sm font-semibold text-orange-600 dark:text-orange-300">
+                피크 {hoverInfo.object.peak_hour ? PEAK_HOUR_LABELS[hoverInfo.object.peak_hour] ?? hoverInfo.object.peak_hour : "—"}
+              </p>
+              <div className="mt-1.5 flex gap-3 text-slate-600 dark:text-white/70">
+                <span>피크 비중 {hoverInfo.object.peak_hour_ratio !== null ? `${(hoverInfo.object.peak_hour_ratio * 100).toFixed(1)}%` : "—"}</span>
+              </div>
+              <div className="mt-1 flex gap-3 text-[10px] text-slate-500 dark:text-white/50">
+                <span>평일 {hoverInfo.object.weekday_ratio !== null ? `${(hoverInfo.object.weekday_ratio * 100).toFixed(1)}%` : "—"}</span>
+                <span>주말 {hoverInfo.object.weekday_ratio !== null ? `${((1 - hoverInfo.object.weekday_ratio) * 100).toFixed(1)}%` : "—"}</span>
+              </div>
+              <div className="mt-1 text-[10px] text-slate-500 dark:text-white/50">
+                <span>유동 {hoverInfo.object.flow_total.toLocaleString()}명</span>
+              </div>
+            </>
+          )}
+          {hoverInfo.object.area_name !== null && elevationMetric === "risk" && (
+            <>
+              <p className={`text-sm font-semibold ${
+                hoverInfo.object.risk_level === "High" ? "text-red-500 dark:text-red-400"
+                  : hoverInfo.object.risk_level === "Medium" ? "text-amber-500 dark:text-amber-400"
+                  : "text-emerald-500 dark:text-emerald-400"
+              }`}>
+                리스크 {hoverInfo.object.risk_score !== null ? hoverInfo.object.risk_score.toFixed(1) : "—"}/100
+                <span className="ml-1.5 text-xs font-normal">
+                  ({hoverInfo.object.risk_level ?? "—"})
+                </span>
+              </p>
+              <div className="mt-1.5 flex gap-3 text-slate-600 dark:text-white/70">
+                <span>매출 {(hoverInfo.object.sales_amt / 10000).toLocaleString()}만</span>
+                <span>점포 {hoverInfo.object.store_cnt}개</span>
+              </div>
+              <div className="mt-1 flex gap-3 text-[10px] text-slate-500 dark:text-white/50">
+                <span>폐업 {hoverInfo.object.close_cnt}</span>
+                <span>유동 {hoverInfo.object.flow_total.toLocaleString()}명</span>
+              </div>
+            </>
+          )}
+          {hoverInfo.object.area_name !== null && elevationMetric !== "timeslot" && elevationMetric !== "risk" && (
             <>
               <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
                 매출 {(hoverInfo.object.sales_amt / 10000).toLocaleString()}만원
@@ -739,6 +916,28 @@ export default function HexMap() {
           >
             매출
           </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => useMapStore.getState().setElevationMetric("timeslot")}
+            className={`h-8 px-3 text-xs ${elevationMetric === "timeslot"
+              ? "bg-orange-600 text-white hover:bg-orange-700 hover:text-white"
+              : "text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white"
+              }`}
+          >
+            시간대
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => useMapStore.getState().setElevationMetric("risk")}
+            className={`h-8 px-3 text-xs ${elevationMetric === "risk"
+              ? "bg-red-600 text-white hover:bg-red-700 hover:text-white"
+              : "text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white"
+              }`}
+          >
+            리스크
+          </Button>
         </div>
         <div className="flex gap-1 rounded-lg border border-slate-200 bg-white/80 p-1 text-xs text-slate-700 backdrop-blur-sm dark:border-white/10 dark:bg-gray-900/80 dark:text-white">
           <Button
@@ -795,25 +994,65 @@ export default function HexMap() {
       {/* Legend */}
       <div className="absolute bottom-6 left-4 z-10 rounded-lg border border-slate-200 bg-white/80 px-4 py-3 backdrop-blur-sm dark:border-white/10 dark:bg-gray-900/80">
         <p className="mb-2 text-[10px] font-medium tracking-wide text-slate-500 dark:text-white/50">
-          {elevationMetric === "flow" ? "유동인구" : "매출증감 (QoQ)"}
+          {elevationMetric === "risk"
+            ? "리스크 레벨"
+            : elevationMetric === "timeslot"
+              ? "피크 시간대 집중도"
+              : elevationMetric === "flow"
+                ? "유동인구"
+                : "매출증감 (QoQ)"}
         </p>
         <div
           className="h-2.5 w-24 rounded-sm"
           style={{
             background:
-              elevationMetric === "flow"
+              elevationMetric === "risk"
                 ? isDark
-                  ? "linear-gradient(to right, #0f1f3d, #245aa5, #3ac3c9, #6ff5b5)"
-                  : "linear-gradient(to right, #dbeafe, #93c5fd, #38bdf8, #34d399)"
-                : isDark
-                  ? "linear-gradient(to right, #FF2400, #F28500, #FFF44F, #4CBB17, #50C878)"
-                  : "linear-gradient(to right, #FF2400, #F28500, #FFF44F, #4CBB17, #50C878)",
+                  ? "linear-gradient(to right, #22c55e, #eab308, #ef4444)"
+                  : "linear-gradient(to right, #22c55e, #eab308, #ef4444)"
+                : elevationMetric === "timeslot"
+                  ? isDark
+                    ? "linear-gradient(to right, #1e50b4, #8050d0, #e0a030, #ff4020)"
+                    : "linear-gradient(to right, #3b82f6, #9060e0, #f59e0b, #ef4444)"
+                  : elevationMetric === "flow"
+                    ? isDark
+                      ? "linear-gradient(to right, #0f1f3d, #245aa5, #3ac3c9, #6ff5b5)"
+                      : "linear-gradient(to right, #dbeafe, #93c5fd, #38bdf8, #34d399)"
+                    : isDark
+                      ? "linear-gradient(to right, #FF2400, #F28500, #FFF44F, #4CBB17, #50C878)"
+                      : "linear-gradient(to right, #FF2400, #F28500, #FFF44F, #4CBB17, #50C878)",
           }}
         />
         <div className="mt-1 flex justify-between text-[10px] text-slate-500 dark:text-white/40">
-          <span>{elevationMetric === "flow" ? "낮음" : "감소"}</span>
-          <span>{elevationMetric === "flow" ? "높음" : "증가"}</span>
+          <span>
+            {elevationMetric === "risk"
+              ? "Low"
+              : elevationMetric === "timeslot"
+                ? "분산"
+                : elevationMetric === "flow"
+                  ? "낮음"
+                  : "감소"}
+          </span>
+          <span>
+            {elevationMetric === "risk"
+              ? "High"
+              : elevationMetric === "timeslot"
+                ? "집중"
+                : elevationMetric === "flow"
+                  ? "높음"
+                  : "증가"}
+          </span>
         </div>
+        {elevationMetric === "risk" && (
+          <p className="mt-1.5 text-[9px] text-slate-400 dark:text-white/30">
+            높이 = 매출 / 색상 = 리스크 스코어
+          </p>
+        )}
+        {elevationMetric === "timeslot" && (
+          <p className="mt-1.5 text-[9px] text-slate-400 dark:text-white/30">
+            높이 = 유동인구 / 색상 = 피크 비중
+          </p>
+        )}
         <div className="mt-2 flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-white/40">
           <div className="h-2.5 w-4 rounded-sm bg-slate-300 dark:bg-[#555]" />
           <span>주거/기타</span>
