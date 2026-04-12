@@ -1,0 +1,8 @@
+{
+  "project_slug": "design-ontology",
+  "brand_profile": "brand_profile.json",
+  "seed_urls_file": "seeds/seed_urls.txt",
+  "build_dir": "build",
+  "kb_dir": "/Users/sungwoon/Documents/designSystem/kb/default",
+  "created_at": "2026-04-09T13:34:20Z"
+}

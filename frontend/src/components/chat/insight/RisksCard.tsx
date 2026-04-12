@@ -15,18 +15,18 @@ interface RisksCardProps {
 }
 
 const levelColors = {
-  high: "text-red-400",
-  medium: "text-amber-400",
-  low: "text-yellow-400",
+  high: "intel-text-danger",
+  medium: "intel-text-accent",
+  low: "intel-text-success",
 };
 
 export function RisksCard({ risks }: RisksCardProps) {
   if (!risks || risks.length === 0) return null;
 
   return (
-    <Card className="border-amber-500/30 bg-white/90 text-slate-900 backdrop-blur-sm dark:bg-gray-900/60 dark:text-white">
+    <Card className="intel-panel-soft text-foreground">
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm font-medium text-amber-400">
+        <CardTitle className="intel-text-accent flex items-center gap-2 text-sm font-medium">
           <AlertTriangle className="h-4 w-4" />
           리스크
         </CardTitle>
@@ -46,10 +46,10 @@ export function RisksCard({ risks }: RisksCardProps) {
               >
                 <div className="flex items-start gap-2">
                   <span className={`mt-0.5 ${levelColors[level]}`}>!</span>
-                  <span className="text-slate-700 dark:text-white/80">{description}</span>
+                  <span className="text-foreground/85">{description}</span>
                 </div>
                 {mitigation && (
-                  <span className="ml-4 text-slate-500 dark:text-white/50">→ {mitigation}</span>
+                  <span className="ml-4 text-muted-foreground">→ {mitigation}</span>
                 )}
               </li>
             );

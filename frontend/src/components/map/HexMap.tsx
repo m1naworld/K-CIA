@@ -573,7 +573,7 @@ export default function HexMap() {
         },
       }),
     ],
-    [data, elevationRange, elevationMetric, selectedAreaId, selectedAreaName]
+    [data, elevationRange, elevationMetric, isDark, selectedAreaId]
   );
 
   const handleClick = useCallback(
@@ -820,7 +820,7 @@ export default function HexMap() {
           )}
           {hoverInfo.object.area_name !== null && elevationMetric === "timeslot" && (
             <>
-              <p className="text-sm font-semibold text-orange-600 dark:text-orange-300">
+              <p className="intel-text-accent text-sm font-semibold">
                 피크 {hoverInfo.object.peak_hour ? PEAK_HOUR_LABELS[hoverInfo.object.peak_hour] ?? hoverInfo.object.peak_hour : "—"}
               </p>
               <div className="mt-1.5 flex gap-3 text-slate-600 dark:text-white/70">
@@ -838,9 +838,9 @@ export default function HexMap() {
           {hoverInfo.object.area_name !== null && elevationMetric === "risk" && (
             <>
               <p className={`text-sm font-semibold ${
-                hoverInfo.object.risk_level === "High" ? "text-red-500 dark:text-red-400"
-                  : hoverInfo.object.risk_level === "Medium" ? "text-amber-500 dark:text-amber-400"
-                  : "text-emerald-500 dark:text-emerald-400"
+                hoverInfo.object.risk_level === "High" ? "intel-text-danger"
+                  : hoverInfo.object.risk_level === "Medium" ? "intel-text-accent"
+                  : "intel-text-success"
               }`}>
                 리스크 {hoverInfo.object.risk_score !== null ? hoverInfo.object.risk_score.toFixed(1) : "—"}/100
                 <span className="ml-1.5 text-xs font-normal">
@@ -859,7 +859,7 @@ export default function HexMap() {
           )}
           {hoverInfo.object.area_name !== null && elevationMetric !== "timeslot" && elevationMetric !== "risk" && (
             <>
-              <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+              <p className="intel-text-accent text-sm font-semibold">
                 매출 {(hoverInfo.object.sales_amt / 10000).toLocaleString()}만원
               </p>
               <div className="mt-1.5 flex gap-3 text-slate-600 dark:text-white/70">
@@ -878,29 +878,29 @@ export default function HexMap() {
       {/* Polygon Tooltip */}
       {polygonHover && (
         <div
-          className="pointer-events-none absolute z-10 rounded-lg border border-slate-200 bg-white/90 px-4 py-3 text-xs text-slate-900 shadow-xl backdrop-blur-sm dark:border-white/10 dark:bg-gray-900/90 dark:text-white"
+          className="intel-panel pointer-events-none absolute z-10 rounded-[1.1rem] px-4 py-3 text-xs text-foreground"
           style={{ left: polygonHover.x + 12, top: polygonHover.y + 12 }}
         >
           <p className="text-sm font-semibold">
             {polygonHover.name}
             {polygonHover.realName && (
-              <span className="ml-1 text-emerald-400">({polygonHover.realName})</span>
+              <span className="intel-text-success ml-1">({polygonHover.realName})</span>
             )}
           </p>
-          <p className="mt-1 text-slate-600 dark:text-white/60">{polygonHover.type}</p>
+          <p className="mt-1 text-muted-foreground">{polygonHover.type}</p>
         </div>
       )}
 
       {/* Metric toggle + Layer toggle */}
       <div className="absolute right-4 top-4 z-10 flex flex-col gap-2">
-        <div className="flex gap-1 rounded-lg border border-slate-200 bg-white/80 p-1 text-xs text-slate-700 backdrop-blur-sm dark:border-white/10 dark:bg-gray-900/80 dark:text-white">
+        <div className="intel-panel-soft flex gap-1 rounded-[1rem] p-1 text-xs text-foreground">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => useMapStore.getState().setElevationMetric("flow")}
             className={`h-8 px-3 text-xs ${elevationMetric === "flow"
-              ? "bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
-              : "text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white"
+              ? "intel-button-primary"
+              : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
               }`}
           >
             유동인구
@@ -910,8 +910,8 @@ export default function HexMap() {
             size="sm"
             onClick={() => useMapStore.getState().setElevationMetric("sales")}
             className={`h-8 px-3 text-xs ${elevationMetric === "sales"
-              ? "bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
-              : "text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white"
+              ? "intel-button-accent"
+              : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
               }`}
           >
             매출
@@ -921,8 +921,8 @@ export default function HexMap() {
             size="sm"
             onClick={() => useMapStore.getState().setElevationMetric("timeslot")}
             className={`h-8 px-3 text-xs ${elevationMetric === "timeslot"
-              ? "bg-orange-600 text-white hover:bg-orange-700 hover:text-white"
-              : "text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white"
+              ? "intel-button-accent"
+              : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
               }`}
           >
             시간대
@@ -932,21 +932,21 @@ export default function HexMap() {
             size="sm"
             onClick={() => useMapStore.getState().setElevationMetric("risk")}
             className={`h-8 px-3 text-xs ${elevationMetric === "risk"
-              ? "bg-red-600 text-white hover:bg-red-700 hover:text-white"
-              : "text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white"
+              ? "intel-button-danger"
+              : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
               }`}
           >
             리스크
           </Button>
         </div>
-        <div className="flex gap-1 rounded-lg border border-slate-200 bg-white/80 p-1 text-xs text-slate-700 backdrop-blur-sm dark:border-white/10 dark:bg-gray-900/80 dark:text-white">
+        <div className="intel-panel-soft flex gap-1 rounded-[1rem] p-1 text-xs text-foreground">
           <Button
             variant="ghost"
             size="sm"
             onClick={toggleAdminDong}
             className={`h-8 px-3 text-xs ${showAdminDong
-              ? "bg-indigo-600 text-white hover:bg-indigo-700 hover:text-white"
-              : "text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white"
+              ? "bg-white text-slate-950 hover:bg-white/90 hover:text-slate-950"
+              : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
               }`}
           >
             행정동
@@ -956,8 +956,8 @@ export default function HexMap() {
             size="sm"
             onClick={toggleCommercialAreas}
             className={`h-8 px-3 text-xs ${showCommercialAreas
-              ? "bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white"
-              : "text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white"
+              ? "intel-button-success"
+              : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
               }`}
           >
             상권
@@ -967,13 +967,13 @@ export default function HexMap() {
 
       {/* Selected area indicator */}
       {selectedAreaName && (
-        <div className="absolute left-4 top-4 z-10 flex items-center gap-2 rounded-lg border border-slate-200 bg-white/80 px-4 py-2 text-sm text-slate-700 backdrop-blur-sm dark:border-white/10 dark:bg-gray-900/80 dark:text-white">
+        <div className="intel-panel absolute left-4 top-4 z-10 flex items-center gap-2 rounded-[1rem] px-4 py-2 text-sm text-foreground">
           <div>
             <span className="font-semibold">
               {selectedRealName ?? selectedAreaName}
             </span>
             {selectedRealName && (
-              <span className="ml-2 text-xs text-slate-500 dark:text-white/50">
+              <span className="ml-2 text-xs text-muted-foreground">
                 ({selectedAreaName})
               </span>
             )}

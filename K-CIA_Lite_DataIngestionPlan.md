@@ -1,5 +1,6 @@
 # K-CIA Lite — 데이터 수집(ingestion) 상세 계획서  
 작성일: 2026-01-30  
+최종 수정: 2026-02-13  
 대상: **성수동(행정동 기준 + 상권코드 기준 “둘 다” 지원)**, 최근 4개 분기(기본) + 실시간(nowcast) 신호
 
 ---
@@ -13,6 +14,13 @@
   - `행정동(ADSTRD)` 지표 + `상권영역(상권_코드)` 지표를 **동시에 적재**  
   - UI 토글: “행정동/상권”  
   - 데이터 모델: `dim_area(area_type)` + `bridge_area_map(행정동↔상권)`로 양방향 조회
+
+### 현재 진행 상태 (2026-02-13)
+
+- **D1/D2/D3/D5/D9 적재 완료**: 분기 기준 fact/dim 테이블 구축
+- **D11 실시간 스냅샷**: 기본 수집/적재 완료 (샘플 장소)
+- **D8 집객시설 ETL**: OA-15580 기반으로 적재 완료
+- **SNS ETL(M9)**: YouTube/Naver 수집 + 공간 매핑 구조 개선 완료
 
 ---
 
@@ -155,26 +163,33 @@
 
 ---
 
-## 5) YouTube(옵션 모듈) 수집 계획 — “없어도 성립” + “있으면 트렌드 보정”
+## 5) 소셜(옵션 모듈) 수집 계획 — “없어도 성립” + “있으면 트렌드 보정”
 > 소셜은 **옵션**이며, 공공데이터 Q&A가 기본 기능으로 성립해야 함(원칙 유지).
 
 ### 5.1 수집 대상 정의(성수동 트렌드)
 - 쿼리 seed:
-  - 키워드: “성수동 카페”, “성수 팝업”, “연무장길”, “뚝섬역 맛집”, “성수 디저트”  
+   - 키워드: “성수동 카페”, “성수 팝업”, “연무장길”, “뚝섬역 맛집”, “성수 디저트”  
+- 수집 소스:
+   - YouTube Data API v3
+   - Naver Search API (Blog/Cafe)
 - 수집 범위:
   - 최근 90일 업로드(기본), 조회수/댓글수 임계치로 필터  
 - 수집 주기:
   - **일 1회**(새 영상/새 댓글 incremental)
 
 ### 5.2 데이터 모델(요약)
-- `yt_video(video_id, published_at, channel_id, title, view_count, like_count, comment_count, query_seed, fetched_at)`
-- `yt_comment(comment_id, video_id, published_at, author_hash, text, like_count, fetched_at)`
-- `yt_insight(video_id, run_date, sentiment_score, topics_json, complaint_tags_json, summary)`
+- `social_trend(date, area_id?, source, keyword, buzz_volume, sentiment_score, top_keywords, evidence_snippets)`
+- `social_module_config(config_key, config_value, updated_at)`
 
-### 5.3 “유튜브가 없을 때” 답변 전략
-- UI에서 “트렌드(옵션)” 토글 OFF 시:
+### 5.3 “소셜이 없을 때” 답변 전략
+-- UI에서 “트렌드(옵션)” 토글 OFF 시:
   - 결과 카드에서 “정성 트렌드 데이터 없음 → 공공데이터 기반 결과만 제공” 문구 고정  
-  - nowcast(D11)가 있으면 “실시간 혼잡도”를 트렌드 대체 신호로 활용
+   - nowcast(D11)가 있으면 “실시간 혼잡도”를 트렌드 대체 신호로 활용
+
+### 5.4 공간 매핑(베스트 에포트)
+
+- 주소/상호가 있는 콘텐츠는 Kakao Local 지오코딩 → 상권 폴리곤 매핑
+- 매핑 실패 시 area_id NULL(성수동 전체)로 집계
 
 ---
 

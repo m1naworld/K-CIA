@@ -10,9 +10,9 @@ const SOURCE_LABELS: Record<string, string> = {
 };
 
 const SOURCE_COLORS: Record<string, string> = {
-  youtube: "bg-red-500/20 text-red-400",
-  naver_blog: "bg-green-500/20 text-green-400",
-  naver_cafe: "bg-emerald-500/20 text-emerald-400",
+  youtube: "intel-surface-danger",
+  naver_blog: "intel-surface-success",
+  naver_cafe: "intel-surface-success",
 };
 
 function SentimentBar({ score }: { score: number | null }) {
@@ -21,10 +21,10 @@ function SentimentBar({ score }: { score: number | null }) {
   const pct = Math.round((score + 1) * 50);
   const color =
     score > 0.3
-      ? "bg-emerald-400"
+      ? "bg-[hsl(var(--intel-success))]"
       : score < -0.3
-        ? "bg-red-400"
-        : "bg-amber-400";
+        ? "bg-[hsl(var(--intel-danger))]"
+        : "bg-[hsl(var(--intel-ochre))]";
   const label = score > 0.3 ? "긍정" : score < -0.3 ? "부정" : "중립";
 
   return (
@@ -48,11 +48,11 @@ export default function SocialBuzzCard({
   data: SocialTrendsResponse;
 }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-white/[0.03]">
+    <div className="intel-panel-soft rounded-lg p-3">
       {/* Header */}
       <div className="mb-2 flex items-center gap-2">
         <svg
-          className="h-4 w-4 text-purple-400"
+          className="intel-text-primary h-4 w-4"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -74,25 +74,16 @@ export default function SocialBuzzCard({
 
       {/* Filter context badges */}
       <div className="mb-2 flex flex-wrap gap-1">
-        <Badge
-          variant="outline"
-          className="border-purple-500/30 text-[10px] text-purple-300"
-        >
+        <Badge variant="outline" className="intel-badge-primary text-[10px]">
           {data.filtered_area ?? "성수동 전체"}
         </Badge>
         {data.filtered_category && (
-          <Badge
-            variant="outline"
-            className="border-blue-500/30 text-[10px] text-blue-300"
-          >
+          <Badge variant="outline" className="intel-badge-primary text-[10px]">
             {data.filtered_category}
           </Badge>
         )}
         {data.is_fallback && (
-          <Badge
-            variant="outline"
-            className="border-amber-500/30 text-[10px] text-amber-300"
-          >
+          <Badge variant="outline" className="intel-badge-accent text-[10px]">
             해당 상권 데이터 부족 · 전체 표시
           </Badge>
         )}
@@ -100,7 +91,7 @@ export default function SocialBuzzCard({
 
       {/* Buzz Volume */}
       <div className="mb-2 flex items-baseline gap-2">
-        <span className="text-lg font-bold text-purple-400">
+        <span className="intel-text-primary text-lg font-bold">
           {data.total_buzz.toLocaleString()}
         </span>
         <span className="text-[10px] text-slate-500 dark:text-white/40">
@@ -115,10 +106,10 @@ export default function SocialBuzzCard({
         </p>
         <SentimentBar score={data.avg_sentiment} />
         <div className="mt-1 flex gap-3 text-[10px]">
-          <span className="text-emerald-400">
+          <span className="intel-text-success">
             긍정 {data.total_pos}
           </span>
-          <span className="text-red-400">
+          <span className="intel-text-danger">
             부정 {data.total_neg}
           </span>
         </div>
@@ -153,7 +144,7 @@ export default function SocialBuzzCard({
               <Badge
                 key={kw}
                 variant="outline"
-                className="border-purple-500/30 text-[10px] text-purple-300"
+                className="intel-badge-primary text-[10px]"
               >
                 {kw}
               </Badge>
@@ -175,7 +166,7 @@ export default function SocialBuzzCard({
                 href={ev.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block rounded border border-slate-200 p-1.5 transition-colors hover:border-purple-500/30 dark:border-white/5 dark:hover:border-purple-500/30"
+                className="block rounded border border-slate-200 p-1.5 transition-colors hover:border-[hsl(var(--intel-claret)/0.3)] dark:border-white/5 dark:hover:border-[hsl(var(--intel-claret)/0.3)]"
               >
                 <div className="flex items-center gap-1">
                   <Badge
@@ -210,7 +201,7 @@ export default function SocialBuzzCard({
               return (
                 <div
                   key={i}
-                  className="flex-1 rounded-t bg-purple-400/60"
+                  className="flex-1 rounded-t bg-[hsl(var(--intel-claret)/0.6)]"
                   style={{ height: `${h}%` }}
                   title={`${d.date}: ${d.buzz}건`}
                 />

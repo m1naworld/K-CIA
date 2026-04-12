@@ -45,8 +45,8 @@ function fmtRate(rate: number | null): string {
 function rateColor(rate: number | null): string {
   if (rate === null) return "text-slate-500 dark:text-white/50";
   return rate >= 0
-    ? "text-emerald-600 dark:text-emerald-400"
-    : "text-red-600 dark:text-red-400";
+    ? "intel-text-success"
+    : "intel-text-danger";
 }
 
 function fmtAmt(v: number | null): string {
@@ -114,11 +114,11 @@ export default function ComparisonCard({ data }: ComparisonCardProps) {
     <div className="space-y-3">
       {/* Quarter badges */}
       <div className="flex items-center gap-2">
-        <Badge className="border-blue-500/50 bg-blue-500/10 text-xs text-blue-700 dark:text-blue-300">
+        <Badge className="intel-badge-primary text-xs">
           Before: {fmtQtr(data.qtr_before)}
         </Badge>
         <span className="text-slate-400 dark:text-white/30">→</span>
-        <Badge className="border-violet-500/50 bg-violet-500/10 text-xs text-violet-700 dark:text-violet-300">
+        <Badge className="intel-badge-accent text-xs">
           After: {fmtQtr(data.qtr_after)}
         </Badge>
       </div>
@@ -170,42 +170,42 @@ export default function ComparisonCard({ data }: ComparisonCardProps) {
           <p className="text-[10px] font-medium text-slate-500 dark:text-white/40">상세 비교</p>
           <div className="flex items-center justify-between py-0.5">
             <span className="text-xs text-slate-500 dark:text-white/50">매출</span>
-              <span className="text-xs text-slate-700 dark:text-white/70">
-               <span className="text-blue-700 dark:text-blue-300">{fmtAmt(before.sales_amt)}</span>
-                <span className="mx-1 text-slate-400 dark:text-white/30">→</span>
-                <span className="text-violet-700 dark:text-violet-300">{fmtAmt(after.sales_amt)}</span>
-              </span>
+            <span className="text-xs text-slate-700 dark:text-white/70">
+              <span className="intel-text-primary">{fmtAmt(before.sales_amt)}</span>
+              <span className="mx-1 text-slate-400 dark:text-white/30">→</span>
+              <span className="intel-text-accent">{fmtAmt(after.sales_amt)}</span>
+            </span>
           </div>
           <div className="flex items-center justify-between py-0.5">
             <span className="text-xs text-slate-500 dark:text-white/50">유동인구</span>
             <span className="text-xs text-slate-700 dark:text-white/70">
-              <span className="text-blue-700 dark:text-blue-300">{fmtNum(before.flow_total)}</span>
+              <span className="intel-text-primary">{fmtNum(before.flow_total)}</span>
               <span className="mx-1 text-slate-400 dark:text-white/30">→</span>
-              <span className="text-violet-700 dark:text-violet-300">{fmtNum(after.flow_total)}</span>
+              <span className="intel-text-accent">{fmtNum(after.flow_total)}</span>
             </span>
           </div>
           <div className="flex items-center justify-between py-0.5">
             <span className="text-xs text-slate-500 dark:text-white/50">점포수</span>
             <span className="text-xs text-slate-700 dark:text-white/70">
-              <span className="text-blue-700 dark:text-blue-300">{fmtNum(before.store_cnt)}</span>
+              <span className="intel-text-primary">{fmtNum(before.store_cnt)}</span>
               <span className="mx-1 text-slate-400 dark:text-white/30">→</span>
-              <span className="text-violet-700 dark:text-violet-300">{fmtNum(after.store_cnt)}</span>
+              <span className="intel-text-accent">{fmtNum(after.store_cnt)}</span>
             </span>
           </div>
           <div className="flex items-center justify-between py-0.5">
             <span className="text-xs text-slate-500 dark:text-white/50">개업</span>
             <span className="text-xs text-slate-700 dark:text-white/70">
-              <span className="text-blue-700 dark:text-blue-300">{fmtNum(before.open_cnt)}</span>
+              <span className="intel-text-primary">{fmtNum(before.open_cnt)}</span>
               <span className="mx-1 text-slate-400 dark:text-white/30">→</span>
-              <span className="text-violet-700 dark:text-violet-300">{fmtNum(after.open_cnt)}</span>
+              <span className="intel-text-accent">{fmtNum(after.open_cnt)}</span>
             </span>
           </div>
           <div className="flex items-center justify-between py-0.5">
             <span className="text-xs text-slate-500 dark:text-white/50">폐업</span>
             <span className="text-xs text-slate-700 dark:text-white/70">
-              <span className="text-blue-700 dark:text-blue-300">{fmtNum(before.close_cnt)}</span>
+              <span className="intel-text-primary">{fmtNum(before.close_cnt)}</span>
               <span className="mx-1 text-slate-400 dark:text-white/30">→</span>
-              <span className="text-violet-700 dark:text-violet-300">{fmtNum(after.close_cnt)}</span>
+              <span className="intel-text-accent">{fmtNum(after.close_cnt)}</span>
             </span>
           </div>
         </div>
@@ -252,13 +252,13 @@ export default function ComparisonCard({ data }: ComparisonCardProps) {
               />
               <Bar
                 dataKey="before"
-                fill={isDark ? "#60a5fa" : "#1d4ed8"}
+                fill={isDark ? "#C98759" : "#7F1734"}
                 radius={[2, 2, 0, 0]}
                 barSize={18}
               />
               <Bar
                 dataKey="after"
-                fill={isDark ? "#a78bfa" : "#6d28d9"}
+                fill={isDark ? "#E0AB63" : "#CC7722"}
                 radius={[2, 2, 0, 0]}
                 barSize={18}
               />
@@ -269,9 +269,9 @@ export default function ComparisonCard({ data }: ComparisonCardProps) {
         {/* Warnings */}
         <WarningList warnings={warnings} />
         {warnings.length === 0 && (
-            <p className="mt-2 text-xs text-emerald-600/80 dark:text-emerald-400/80">
-              특별한 위험 신호 없음
-            </p>
+          <p className="intel-text-success mt-2 text-xs">
+            특별한 위험 신호 없음
+          </p>
         )}
       </MetricCard>
     </div>

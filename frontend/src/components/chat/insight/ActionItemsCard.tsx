@@ -11,9 +11,9 @@ export function ActionItemsCard({ actionItems }: ActionItemsCardProps) {
   if (!actionItems || actionItems.length === 0) return null;
 
   return (
-    <Card className="border-emerald-500/30 bg-white/90 text-slate-900 backdrop-blur-sm dark:bg-gray-900/60 dark:text-white">
+    <Card className="intel-panel-soft text-foreground">
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm font-medium text-emerald-400">
+        <CardTitle className="intel-text-success flex items-center gap-2 text-sm font-medium">
           <Target className="h-4 w-4" />
           추천 액션
         </CardTitle>
@@ -23,9 +23,9 @@ export function ActionItemsCard({ actionItems }: ActionItemsCardProps) {
           {actionItems.map((item, index) => (
             <li
               key={index}
-              className="flex items-start gap-2 text-xs text-slate-700 dark:text-white/80"
+              className="flex items-start gap-2 text-xs text-foreground/85"
             >
-              <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-[10px] text-emerald-400">
+              <span className="intel-surface-success mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px]">
                 {index + 1}
               </span>
               <span>{item}</span>

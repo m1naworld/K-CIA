@@ -103,35 +103,41 @@ export default function Sidebar() {
   if (!sidebarOpen) return null;
 
   return (
-    <div className="flex h-full w-80 flex-col border-l border-slate-200 bg-white dark:border-white/10 dark:bg-gray-950">
+    <div className="intel-panel intel-scroll flex h-full w-[22rem] flex-col rounded-none border-y-0 border-r-0 border-l border-border/70 text-foreground shadow-[-28px_0_80px_-48px_rgba(2,6,23,0.35)] xl:w-[24rem]">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-white/10">
+      <div className="sticky top-0 z-10 border-b border-border/70 bg-background/70 px-5 py-4 backdrop-blur-xl">
+        <div className="intel-kicker">Area Briefing</div>
         <div>
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+          <h2 className="intel-title mt-2 text-sm font-semibold text-foreground">
             {selectedRealName ?? selectedAreaName ?? "구역 상세"}
           </h2>
           {selectedRealName && selectedAreaName && (
-            <p className="text-xs text-slate-500 dark:text-white/50">{selectedAreaName}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{selectedAreaName}</p>
           )}
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={closeSidebar}
-          className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-white/50 dark:hover:bg-white/10 dark:hover:text-white"
-        >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </Button>
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <p className="text-xs leading-5 text-muted-foreground">
+            선택한 구역의 흐름, 경쟁, 리스크와 추천을 한 화면에서 요약합니다.
+          </p>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={closeSidebar}
+            className="h-9 w-9 rounded-full p-0 text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </Button>
+        </div>
       </div>
 
       {/* Content */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto"
+        className="intel-scroll flex-1 overflow-y-auto"
       >
-        <div className="space-y-3 p-4">
+        <div className="space-y-4 p-4">
           {comparisonMode ? (
             /* === Comparison Mode === */
             comparisonLoading ? (
@@ -139,7 +145,7 @@ export default function Sidebar() {
             ) : comparisonData ? (
               <ComparisonCard data={comparisonData} />
             ) : (
-              <div className="flex h-40 items-center justify-center text-center text-sm text-slate-500 dark:text-white/40">
+              <div className="intel-panel-soft flex h-40 items-center justify-center rounded-[1.35rem] text-center text-sm text-muted-foreground">
                 비교할 분기를 선택하고
                 <br />
                 헥사곤을 클릭하세요
@@ -153,11 +159,11 @@ export default function Sidebar() {
               <div className="flex items-center gap-2">
                 <Badge
                   variant="outline"
-                  className="border-blue-500/50 bg-blue-500/10 text-xs text-blue-300"
+                  className="intel-badge-accent rounded-full text-xs"
                 >
                   기준: {hexDetail.qtr}
                 </Badge>
-                <span className="text-[10px] text-slate-500 dark:text-white/40">
+                <span className="text-[10px] text-muted-foreground">
                   {hexDetail.data_asof}
                 </span>
               </div>
@@ -169,7 +175,7 @@ export default function Sidebar() {
                     <Badge
                       key={area}
                       variant="secondary"
-                      className="bg-slate-100 text-xs text-slate-600 dark:bg-white/5 dark:text-white/70"
+                      className="rounded-full bg-secondary/70 text-xs text-secondary-foreground"
                     >
                       {area}
                     </Badge>
@@ -196,12 +202,12 @@ export default function Sidebar() {
                     data={hexDetail.trend.flow
                       .filter((p) => p.value !== null)
                       .map((p) => ({ label: p.qtr, value: p.value! }))}
-                    color="#60a5fa"
+                    color="#7F1734"
                   />
                 )}
                 {hexDetail.flow.flow_by_weekday && (
                   <div className="mt-3">
-                    <p className="mb-1 text-[10px] text-slate-500 dark:text-white/40">요일별 분포</p>
+                    <p className="mb-1 text-[10px] text-muted-foreground">요일별 분포</p>
                     <BarDistribution
                       data={hexDetail.flow.flow_by_weekday}
                       labelMap={WEEKDAY_LABELS}
@@ -239,7 +245,7 @@ export default function Sidebar() {
                         label: p.qtr,
                         value: Math.round(p.value! / 10000),
                       }))}
-                    color="#fbbf24"
+                    color="#CC7722"
                   />
                 )}
               </MetricCard>
@@ -258,20 +264,20 @@ export default function Sidebar() {
                 />
                 <div className="mt-2 flex gap-4">
                   <div className="flex-1">
-                    <p className="text-[10px] text-slate-500 dark:text-white/40">개업</p>
-                    <p className="text-sm font-medium text-emerald-400">
+                    <p className="text-[10px] text-muted-foreground">개업</p>
+                    <p className="intel-text-success text-sm font-medium">
                       +{hexDetail.competition.open_cnt ?? 0}
                     </p>
                   </div>
                   <div className="flex-1">
-                    <p className="text-[10px] text-slate-500 dark:text-white/40">폐업</p>
-                    <p className="text-sm font-medium text-red-400">
+                    <p className="text-[10px] text-muted-foreground">폐업</p>
+                    <p className="intel-text-danger text-sm font-medium">
                       -{hexDetail.competition.close_cnt ?? 0}
                     </p>
                   </div>
                   <div className="flex-1">
-                    <p className="text-[10px] text-slate-500 dark:text-white/40">폐업률</p>
-                    <p className="text-sm font-medium text-slate-900 dark:text-white">
+                    <p className="text-[10px] text-muted-foreground">폐업률</p>
+                    <p className="text-sm font-medium text-foreground">
                       {hexDetail.competition.close_rate !== null
                         ? `${(hexDetail.competition.close_rate * 100).toFixed(1)}%`
                         : "-"}
@@ -313,19 +319,19 @@ export default function Sidebar() {
                   <div className="mb-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-2xl font-bold text-slate-900 dark:text-white">
+                        <span className="text-2xl font-bold text-foreground">
                           {hexDetail.risk.risk_score.toFixed(1)}
                         </span>
-                        <span className="text-xs text-slate-500 dark:text-white/40">/100</span>
+                        <span className="text-xs text-muted-foreground">/100</span>
                       </div>
                       <Badge
                         variant="outline"
                         className={`text-xs font-semibold ${
                           hexDetail.risk.risk_level === "High"
-                            ? "border-red-500/50 bg-red-500/10 text-red-500 dark:text-red-400"
+                            ? "intel-badge-danger"
                             : hexDetail.risk.risk_level === "Medium"
-                              ? "border-amber-500/50 bg-amber-500/10 text-amber-500 dark:text-amber-400"
-                              : "border-emerald-500/50 bg-emerald-500/10 text-emerald-500 dark:text-emerald-400"
+                              ? "intel-badge-accent"
+                              : "intel-badge-success"
                         }`}
                       >
                         {hexDetail.risk.risk_level === "High" ? "고위험"
@@ -334,7 +340,7 @@ export default function Sidebar() {
                       </Badge>
                     </div>
                     {/* Gauge bar */}
-                    <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
+                    <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
                       <div
                         className="h-full rounded-full transition-all duration-500"
                         style={{
@@ -347,7 +353,7 @@ export default function Sidebar() {
                         }}
                       />
                     </div>
-                    <div className="mt-1 flex justify-between text-[9px] text-slate-400 dark:text-white/30">
+                    <div className="mt-1 flex justify-between text-[9px] text-muted-foreground">
                       <span>Low</span>
                       <span>Medium</span>
                       <span>High</span>
@@ -358,7 +364,7 @@ export default function Sidebar() {
                 {/* Decomposition bar chart */}
                 {hexDetail.risk.decomposition.length > 0 && (
                   <div className="mt-1">
-                    <p className="mb-2 text-[10px] font-medium text-slate-500 dark:text-white/40">원인 분해</p>
+                    <p className="mb-2 text-[10px] font-medium text-muted-foreground">원인 분해</p>
                     <div className="space-y-2">
                       {hexDetail.risk.decomposition
                         .sort((a, b) => b.contribution - a.contribution)
@@ -369,12 +375,12 @@ export default function Sidebar() {
                           return (
                             <div key={d.factor}>
                               <div className="flex items-center justify-between text-xs">
-                                <span className="text-slate-600 dark:text-white/60">{d.label}</span>
-                                <span className="font-medium text-slate-900 dark:text-white">
+                                <span className="text-muted-foreground">{d.label}</span>
+                                <span className="font-medium text-foreground">
                                   {pct.toFixed(1)}%
                                 </span>
                               </div>
-                              <div className="mt-0.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
+                              <div className="mt-0.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
                                 <div
                                   className="h-full rounded-full transition-all duration-300"
                                   style={{
@@ -385,7 +391,7 @@ export default function Sidebar() {
                                   }}
                                 />
                               </div>
-                              <div className="mt-0.5 flex justify-between text-[9px] text-slate-400 dark:text-white/25">
+                              <div className="mt-0.5 flex justify-between text-[9px] text-muted-foreground">
                                 <span>
                                   {d.value !== null
                                     ? d.factor === "close_rate" || d.factor === "store_growth" || d.factor === "sales_decline"
@@ -405,7 +411,7 @@ export default function Sidebar() {
                 {/* Warnings */}
                 <WarningList warnings={hexDetail.risk.warnings} />
                 {hexDetail.risk.warnings.length === 0 && hexDetail.risk.risk_level !== "High" && (
-                  <p className="mt-2 text-xs text-emerald-600/80 dark:text-emerald-400/80">
+                  <p className="intel-text-success mt-2 text-xs">
                     특별한 위험 신호 없음
                   </p>
                 )}
@@ -436,31 +442,31 @@ export default function Sidebar() {
                     <span
                       className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${
                         hexDetail.recommendation.grade === "S"
-                          ? "bg-emerald-500/20 text-emerald-400"
+                          ? "intel-surface-success"
                           : hexDetail.recommendation.grade === "A"
-                            ? "bg-blue-500/20 text-blue-400"
+                            ? "intel-surface-primary"
                             : hexDetail.recommendation.grade === "B"
-                              ? "bg-amber-500/20 text-amber-400"
+                              ? "intel-surface-accent"
                               : hexDetail.recommendation.grade === "C"
-                                ? "bg-orange-500/20 text-orange-400"
-                                : "bg-red-500/20 text-red-400"
+                                ? "intel-surface-accent"
+                                : "intel-surface-danger"
                       }`}
                     >
                       {hexDetail.recommendation.grade}
                     </span>
-                    <span className="text-xs text-slate-600 dark:text-white/60">
+                    <span className="text-xs text-muted-foreground">
                       {hexDetail.recommendation.summary}
                     </span>
                   </div>
                 </div>
                 {hexDetail.recommendation.pros.length > 0 && (
                   <div className="mt-2">
-                    <p className="text-[10px] text-slate-500 dark:text-white/40">긍정 요인</p>
+                    <p className="text-[10px] text-muted-foreground">긍정 요인</p>
                     <ul className="mt-1 space-y-0.5">
                       {hexDetail.recommendation.pros.map((p, i) => (
                         <li
                           key={i}
-                          className="flex items-start gap-1.5 text-xs text-emerald-400/90"
+                          className="intel-text-success flex items-start gap-1.5 text-xs"
                         >
                           <span className="mt-0.5 shrink-0">+</span>
                           <span>{p}</span>
@@ -471,12 +477,12 @@ export default function Sidebar() {
                 )}
                 {hexDetail.recommendation.cons.length > 0 && (
                   <div className="mt-2">
-                    <p className="text-[10px] text-slate-500 dark:text-white/40">부정 요인</p>
+                    <p className="text-[10px] text-muted-foreground">부정 요인</p>
                     <ul className="mt-1 space-y-0.5">
                       {hexDetail.recommendation.cons.map((c, i) => (
                         <li
                           key={i}
-                          className="flex items-start gap-1.5 text-xs text-red-400/90"
+                          className="intel-text-danger flex items-start gap-1.5 text-xs"
                         >
                           <span className="mt-0.5 shrink-0">-</span>
                           <span>{c}</span>
@@ -521,7 +527,7 @@ export default function Sidebar() {
               )}
             </>
           ) : (
-            <div className="flex h-40 items-center justify-center text-sm text-slate-500 dark:text-white/40">
+            <div className="intel-panel-soft flex h-40 items-center justify-center rounded-[1.35rem] text-sm text-muted-foreground">
               데이터를 불러올 수 없습니다
             </div>
           )}
@@ -541,8 +547,8 @@ function GrowthStat({
   if (rate === null) {
     return (
       <div className="text-center">
-        <p className="text-[10px] text-slate-500 dark:text-white/40">{label}</p>
-        <p className="text-sm text-slate-400 dark:text-white/30">-</p>
+        <p className="text-[10px] text-muted-foreground">{label}</p>
+        <p className="text-sm text-muted-foreground">-</p>
       </div>
     );
   }
@@ -551,10 +557,10 @@ function GrowthStat({
   const pct = rate * 100; // API returns ratio (0.0219 = 2.19%)
   return (
     <div className="text-center">
-      <p className="text-[10px] text-slate-500 dark:text-white/40">{label}</p>
+      <p className="text-[10px] text-muted-foreground">{label}</p>
       <p
         className={`text-sm font-medium ${
-          isPositive ? "text-emerald-400" : "text-red-400"
+          isPositive ? "intel-text-success" : "intel-text-danger"
         }`}
       >
         {isPositive ? "+" : ""}
@@ -567,12 +573,12 @@ function GrowthStat({
 function LoadingSkeleton() {
   return (
     <div className="space-y-3">
-      <Skeleton className="h-6 w-24 bg-slate-200/80 dark:bg-white/5" />
-      <Skeleton className="h-32 w-full bg-slate-200/80 dark:bg-white/5" />
-      <Skeleton className="h-24 w-full bg-slate-200/80 dark:bg-white/5" />
-      <Skeleton className="h-24 w-full bg-slate-200/80 dark:bg-white/5" />
-      <Skeleton className="h-20 w-full bg-slate-200/80 dark:bg-white/5" />
-      <Skeleton className="h-20 w-full bg-slate-200/80 dark:bg-white/5" />
+      <Skeleton className="h-6 w-24 bg-muted/70" />
+      <Skeleton className="h-32 w-full bg-muted/70" />
+      <Skeleton className="h-24 w-full bg-muted/70" />
+      <Skeleton className="h-24 w-full bg-muted/70" />
+      <Skeleton className="h-20 w-full bg-muted/70" />
+      <Skeleton className="h-20 w-full bg-muted/70" />
     </div>
   );
 }

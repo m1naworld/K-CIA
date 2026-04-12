@@ -71,14 +71,14 @@ export default function OperatingStrategyCard({ data }: Props) {
         <div className="flex items-center gap-2">
           <Badge
             variant="outline"
-            className="border-emerald-500/40 bg-emerald-500/10 text-xs text-emerald-500 dark:text-emerald-400"
+            className="intel-badge-primary text-xs"
           >
             {data.recommended_open}
           </Badge>
           <span className="text-[10px] text-slate-400 dark:text-white/30">~</span>
           <Badge
             variant="outline"
-            className="border-red-500/40 bg-red-500/10 text-xs text-red-500 dark:text-red-400"
+            className="intel-badge-accent text-xs"
           >
             {data.recommended_close}
           </Badge>
@@ -92,13 +92,13 @@ export default function OperatingStrategyCard({ data }: Props) {
           <div className="relative h-6 w-full overflow-hidden rounded border border-slate-300/60 bg-slate-100/80 dark:border-white/15 dark:bg-slate-800/40">
             {/* Operating hours background */}
             <div
-              className="absolute top-0 h-full bg-emerald-500/30 ring-1 ring-emerald-500/40 dark:bg-emerald-400/20 dark:ring-emerald-400/40"
+              className="absolute top-0 h-full intel-surface-primary ring-1"
               style={{
                 left: `${(openHour / 24) * 100}%`,
                 width: `${(((closeHour > openHour ? closeHour - openHour : 24 - openHour + closeHour)) / 24) * 100}%`,
               }}
             />
-            <div className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-[9px] font-medium text-emerald-700/80 dark:text-emerald-300/80">
+            <div className="intel-text-primary pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-[9px] font-medium">
               영업
             </div>
             {/* Peak slot highlights */}
@@ -108,7 +108,7 @@ export default function OperatingStrategyCard({ data }: Props) {
               return (
                 <div
                   key={slot.hour_range}
-                  className="absolute top-0 h-full bg-amber-500/55 ring-1 ring-amber-500/70 dark:bg-amber-400/35 dark:ring-amber-400/60"
+                  className="absolute top-0 h-full intel-surface-accent ring-1"
                   style={{
                     left: `${(start / 24) * 100}%`,
                     width: `${(hours / 24) * 100}%`,
@@ -132,11 +132,11 @@ export default function OperatingStrategyCard({ data }: Props) {
           {/* Legend */}
           <div className="mt-4 flex items-center gap-3">
             <div className="flex items-center gap-1">
-              <div className="h-2 w-3 rounded-sm bg-emerald-500/20 dark:bg-emerald-500/15" />
+              <div className="intel-surface-primary h-2 w-3 rounded-sm border" />
               <span className="text-[8px] text-slate-400 dark:text-white/30">영업</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="h-2 w-3 rounded-sm bg-amber-500/40 dark:bg-amber-500/30" />
+              <div className="intel-surface-accent h-2 w-3 rounded-sm border" />
               <span className="text-[8px] text-slate-400 dark:text-white/30">피크</span>
             </div>
           </div>
@@ -161,7 +161,7 @@ export default function OperatingStrategyCard({ data }: Props) {
                   variant="outline"
                   className={`w-11 shrink-0 justify-center px-1 text-[10px] ${
                     slot.is_peak
-                      ? "border-amber-500/40 bg-amber-500/10 text-amber-500 dark:text-amber-400"
+                      ? "intel-badge-accent"
                       : "border-slate-300/40 bg-slate-100 text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-white/40"
                   }`}
                 >
@@ -171,8 +171,8 @@ export default function OperatingStrategyCard({ data }: Props) {
                   <div
                     className={`h-full rounded-full transition-all ${
                       slot.is_peak
-                        ? "bg-gradient-to-r from-amber-400 to-amber-500"
-                        : "bg-gradient-to-r from-slate-400 to-slate-500 dark:from-slate-500 dark:to-slate-600"
+                        ? "intel-meter-accent"
+                        : "intel-meter-primary opacity-60"
                     }`}
                     style={{ width: `${barWidth}%` }}
                   />
@@ -286,7 +286,7 @@ export default function OperatingStrategyCard({ data }: Props) {
                   <div key={slot.hourRange} className="flex items-center gap-1.5">
                     <span className={`w-8 text-right text-[9px] ${
                       slot.isPeak
-                        ? "font-medium text-amber-600 dark:text-amber-400"
+                        ? "intel-text-accent font-medium"
                         : "text-slate-500 dark:text-white/40"
                     }`}>
                       {slot.label}
@@ -294,7 +294,7 @@ export default function OperatingStrategyCard({ data }: Props) {
                     <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-slate-200/70 dark:bg-white/5">
                       <div
                         className={`h-full rounded-full transition-all ${
-                          slot.isPeak ? "bg-amber-500/50" : "bg-slate-400/30 dark:bg-white/15"
+                          slot.isPeak ? "intel-meter-accent" : "intel-meter-primary opacity-35"
                         }`}
                         style={{ width: `${barW}%` }}
                       />

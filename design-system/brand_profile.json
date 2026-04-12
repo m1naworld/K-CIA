@@ -1,0 +1,100 @@
+{
+  "brand_name": "K-CIA Lite",
+  "system_name": "K-CIA Intelligence System",
+  "product_summary": "성수동 하이퍼로컬 상권 분석을 지도, 지표, 대화형 인사이트로 연결하는 AI 플랫폼",
+  "audiences": [
+    "성수동에 매장을 열거나 운영 전략을 검토하는 예비 창업자",
+    "입지 판단과 상권 변화를 빠르게 읽어야 하는 상권 컨설턴트와 운영자",
+    "지역 흐름을 근거 기반으로 파악하려는 로컬 비즈니스 의사결정자"
+  ],
+  "brand_keywords": [
+    "analytical",
+    "editorial",
+    "trustworthy",
+    "decisive"
+  ],
+  "anti_keywords": [
+    "generic",
+    "noisy",
+    "gamified",
+    "ambiguous"
+  ],
+  "tone_of_voice": [
+    "clear",
+    "evidence-led",
+    "calm",
+    "confident"
+  ],
+  "visual_keywords": [
+    "cartographic depth",
+    "editorial dashboard hierarchy",
+    "intelligence briefing panels",
+    "measured navy-ochre accents"
+  ],
+  "interaction_keywords": [
+    "progressive disclosure",
+    "contextual overlays",
+    "confident comparison",
+    "low-noise motion"
+  ],
+  "platforms": [
+    "web"
+  ],
+  "accessibility_targets": [
+    "WCAG 2.2 AA"
+  ],
+  "product_primitives": [
+    "geo intelligence shell",
+    "map filter controls",
+    "metric briefing cards",
+    "quarter comparison panels",
+    "risk gauges and decomposition bars",
+    "ai consultant chat",
+    "evidence tables"
+  ],
+  "color_reference": {
+    "path": "/Users/sungwoon/project/color/docs/color-reference.md",
+    "preferred_families": [
+      "Deep Reds",
+      "Standard Oranges",
+      "Pastel Oranges"
+    ],
+    "palette_strategy": {
+      "mode": "brand-guided",
+      "candidate_count": 3,
+      "active_candidate": 1,
+      "temperature": "warm",
+      "contrast": "balanced",
+      "diversity": "balanced",
+      "surface_style": "tinted",
+      "prefer_moods": [
+        "신뢰감",
+        "고급스러움",
+        "안정감"
+      ],
+      "avoid_moods": [
+        "달콤함",
+        "귀여움",
+        "경쾌함"
+      ]
+    },
+    "notes": [
+      "intelligence dashboard tone first",
+      "avoid beauty-like pastel dominance"
+    ]
+  },
+  "reference_preferences": {
+    "prioritize_sources_containing": [
+      "components",
+      "dashboard",
+      "data visualization",
+      "cartography",
+      "typography",
+      "accessibility"
+    ],
+    "avoid_sources_containing": [
+      "brand-only",
+      "marketing-only"
+    ]
+  }
+}

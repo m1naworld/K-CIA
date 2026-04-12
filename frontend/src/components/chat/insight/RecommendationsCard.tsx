@@ -26,9 +26,9 @@ export function RecommendationsCard({
   const isStructured = typeof recommendations[0] === "object";
 
   return (
-    <Card className="border-blue-500/30 bg-white/90 text-slate-900 backdrop-blur-sm dark:bg-gray-900/60 dark:text-white">
+    <Card className="intel-panel-soft text-foreground">
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm font-medium text-blue-400">
+        <CardTitle className="intel-text-primary flex items-center gap-2 text-sm font-medium">
           <Lightbulb className="h-4 w-4" />
           추천 상권
         </CardTitle>
@@ -39,33 +39,33 @@ export function RecommendationsCard({
             {(recommendations as RecommendationItem[]).map((item) => (
               <div
                 key={item.rank}
-                className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-3"
+                className="intel-surface-primary rounded-lg border p-3"
               >
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500 text-xs font-bold text-white">
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="intel-button-primary flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold">
                     {item.rank}
                   </span>
-                  <span className="text-sm font-medium text-slate-900 dark:text-white">
+                  <span className="text-sm font-medium text-foreground">
                     {item.area_name}
                   </span>
                 </div>
-                <p className="text-xs text-slate-600 dark:text-white/70 mb-2">{item.reason}</p>
+                <p className="mb-2 text-xs text-muted-foreground">{item.reason}</p>
                 {item.metrics && (
                   <div className="flex flex-wrap gap-3 text-xs">
                     {item.metrics.매출 && (
-                      <div className="flex items-center gap-1 text-green-400">
+                      <div className="intel-text-success flex items-center gap-1">
                         <TrendingUp className="h-3 w-3" />
                         <span>매출 {item.metrics.매출}</span>
                       </div>
                     )}
                     {item.metrics.점포수 && (
-                      <div className="flex items-center gap-1 text-yellow-400">
+                      <div className="intel-text-accent flex items-center gap-1">
                         <Store className="h-3 w-3" />
                         <span>{item.metrics.점포수}</span>
                       </div>
                     )}
                     {item.metrics.유동인구 && (
-                      <div className="flex items-center gap-1 text-cyan-400">
+                      <div className="intel-text-primary flex items-center gap-1">
                         <Users className="h-3 w-3" />
                         <span>{item.metrics.유동인구}</span>
                       </div>
@@ -80,9 +80,9 @@ export function RecommendationsCard({
             {(recommendations as string[]).map((item, index) => (
               <li
                 key={index}
-                className="flex items-start gap-2 text-xs text-slate-700 dark:text-white/80"
+                className="flex items-start gap-2 text-xs text-foreground/85"
               >
-                <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-[10px] text-blue-400">
+                <span className="intel-surface-primary mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px]">
                   {index + 1}
                 </span>
                 <span>{item}</span>

@@ -33,9 +33,9 @@ export default function ThemeToggle() {
       variant="outline"
       size="sm"
       onClick={() => setTheme(nextTheme)}
-      className="h-8 border-slate-200 bg-white text-xs text-slate-700 hover:bg-slate-100 dark:border-white/10 dark:bg-gray-900 dark:text-white/70 dark:hover:bg-white/10"
+      className="intel-control h-10 rounded-full px-3 text-[11px] font-medium tracking-[0.12em] text-foreground shadow-none hover:bg-accent/50"
     >
-      {theme === "dark" ? "라이트 모드" : "다크 모드"}
+      {theme === "dark" ? "라이트" : "다크"}
     </Button>
   );
 }

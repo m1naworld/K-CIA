@@ -14,8 +14,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "K-CIA Lite",
-  description: "성수동 하이퍼로컬 상권 분석 AI 플랫폼",
+  title: "K-CIA Lite | Intelligence Briefing",
+  description: "성수동 하이퍼로컬 상권 분석을 지도, 지표, 대화형 인사이트로 연결하는 AI 플랫폼",
 };
 
 export default function RootLayout({
@@ -24,9 +24,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="ko" className="dark" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} bg-background text-foreground antialiased`}
       >
         {children}
       </body>

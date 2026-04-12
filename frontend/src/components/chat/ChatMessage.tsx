@@ -22,7 +22,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
   if (isUser) {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[85%] rounded-lg bg-blue-600 px-3 py-2 text-sm text-white">
+        <div className="intel-message-bubble max-w-[85%] rounded-[1.1rem] px-3.5 py-2.5 text-sm">
           {message.content}
         </div>
       </div>
@@ -34,7 +34,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
     <div className="flex flex-col gap-2">
       {/* Streaming indicator */}
       {message.isStreaming && !message.insight && !message.sql && (
-        <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-white/60">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           <span>
             {message.route === "sql"
@@ -50,7 +50,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
       {/* Error message */}
       {message.error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+        <div className="intel-surface-danger rounded-[1rem] border px-3 py-2 text-sm">
           {message.error}
         </div>
       )}
@@ -59,7 +59,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
         <div className="flex items-center gap-2">
           <Badge
             variant="outline"
-            className="border-slate-200 bg-slate-100 text-[10px] text-slate-500 dark:border-white/20 dark:bg-gray-800/50 dark:text-white/50"
+            className="rounded-full border-border/60 bg-background/60 text-[10px] text-muted-foreground"
           >
             업종 자동 적용: {message.categoryInfo.service_name}
           </Badge>
@@ -71,7 +71,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
       {/* Summary */}
       {message.content && !message.error && (
-        <div className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-900 dark:bg-gray-800/60 dark:text-white/90">
+        <div className="rounded-[1rem] border border-border/60 bg-card/70 px-3.5 py-3 text-sm text-foreground backdrop-blur-sm">
           {message.content}
         </div>
       )}
@@ -110,7 +110,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
         <div className="flex justify-end">
           <Badge
             variant="outline"
-            className="border-slate-200 bg-slate-100 text-[10px] text-slate-500 dark:border-white/20 dark:bg-gray-800/50 dark:text-white/50"
+            className="rounded-full border-border/60 bg-background/60 text-[10px] text-muted-foreground"
           >
             기준: {message.dataAsof}
           </Badge>

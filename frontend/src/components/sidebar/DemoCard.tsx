@@ -31,20 +31,20 @@ export default function DemoCard({ data }: Props) {
       {/* Gender ratio bar */}
       <div className="mb-3">
         <div className="mb-1 flex items-center justify-between text-xs">
-          <span className="text-blue-400">
+          <span className="intel-text-primary">
             남성 {(maleRatio * 100).toFixed(1)}%
           </span>
-          <span className="text-pink-400">
+          <span className="intel-text-accent">
             여성 {(femaleRatio * 100).toFixed(1)}%
           </span>
         </div>
         <div className="flex h-2 w-full overflow-hidden rounded-full">
           <div
-            className="bg-blue-500 transition-all"
+            className="intel-meter-primary transition-all"
             style={{ width: `${maleRatio * 100}%` }}
           />
           <div
-            className="bg-pink-500 transition-all"
+            className="intel-meter-accent transition-all"
             style={{ width: `${femaleRatio * 100}%` }}
           />
         </div>
@@ -68,13 +68,13 @@ export default function DemoCard({ data }: Props) {
                   <div className="relative h-12 w-full flex items-end">
                     <div
                       className={`w-full rounded-t transition-all ${isPeak
-                        ? "bg-emerald-500 shadow-md shadow-emerald-500/30"
+                        ? "intel-meter-accent shadow-md shadow-[hsl(var(--intel-ochre)/0.28)]"
                         : "bg-slate-400/60 dark:bg-slate-500/50"
                         }`}
                       style={{ height: `${displayHeight}%` }}
                     />
                   </div>
-                  <span className={`mt-1 text-[9px] ${isPeak ? "font-bold text-emerald-500 dark:text-emerald-400" : "text-slate-500 dark:text-white/40"}`}>
+                  <span className={`mt-1 text-[9px] ${isPeak ? "intel-text-accent font-bold" : "text-slate-500 dark:text-white/40"}`}>
                     {AGE_LABELS[item.age_group] ?? item.age_group}
                   </span>
                   <div className="pointer-events-none absolute -top-6 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded bg-white px-1.5 py-0.5 text-[10px] text-slate-700 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 dark:bg-gray-800 dark:text-white">
@@ -97,7 +97,7 @@ export default function DemoCard({ data }: Props) {
           )}
           {data.peak_age_group && (
             <span>
-              <span className="text-emerald-500 dark:text-emerald-400">{AGE_LABELS[data.peak_age_group] ?? data.peak_age_group}</span>
+              <span className="intel-text-accent">{AGE_LABELS[data.peak_age_group] ?? data.peak_age_group}</span>
             </span>
           )}
         </div>

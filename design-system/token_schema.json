@@ -1,0 +1,387 @@
+{
+  "naming": {
+    "core": "{category}.{role}.{scale}",
+    "semantic": "{category}.{intent}.{state}",
+    "component": "{component}.{slot}.{property}"
+  },
+  "layers": [
+    {
+      "name": "core",
+      "purpose": "브랜드에 종속되지 않는 수치와 원재료 토큰",
+      "categories": [
+        "color",
+        "spacing",
+        "radius",
+        "typography",
+        "motion",
+        "elevation"
+      ]
+    },
+    {
+      "name": "semantic",
+      "purpose": "역할 중심 토큰",
+      "categories": [
+        "surface",
+        "text",
+        "border",
+        "focus",
+        "feedback"
+      ]
+    },
+    {
+      "name": "component",
+      "purpose": "컴포넌트 슬롯별 적용 토큰",
+      "categories": [
+        "button",
+        "input",
+        "navigation",
+        "overlay",
+        "editor"
+      ]
+    }
+  ],
+  "categories": {
+    "color": {
+      "core_groups": [
+        "neutral",
+        "accent",
+        "success",
+        "warning",
+        "danger",
+        "info"
+      ],
+      "scale": [
+        0,
+        50,
+        100,
+        200,
+        300,
+        400,
+        500,
+        600,
+        700,
+        800,
+        900,
+        1000
+      ],
+      "rules": [
+        "accent는 최대 1개의 주 계열로 시작",
+        "semantic feedback은 accent와 분리",
+        "text/surface 조합은 접근성 기준을 우선"
+      ],
+      "reference_palette": {
+        "source_title": "REFERENCE X Vol.1 - Color Reference",
+        "source_path": "/Users/sungwoon/project/color/docs/color-reference.md",
+        "preferred_families": [
+          "Deep Reds",
+          "Standard Oranges",
+          "Pastel Oranges"
+        ],
+        "selection_mode": "brand-guided",
+        "strategy": {
+          "mode": "brand-guided",
+          "candidate_count": 3,
+          "active_candidate": 1,
+          "temperature": "warm",
+          "contrast": "balanced",
+          "diversity": "balanced",
+          "surface_style": "tinted",
+          "prefer_moods": [
+            "신뢰감",
+            "고급스러움",
+            "안정감"
+          ],
+          "avoid_moods": [
+            "달콤함",
+            "귀여움",
+            "경쾌함"
+          ]
+        },
+        "selected_colors": [
+          {
+            "name": "Navy Blue",
+            "family": "Deep Blues",
+            "hex": "#000080",
+            "mood": "저명도, 중채도, 차가운 온도감이 강한 블루 계열 / 신뢰, 권위, 집중, 전문성, 절제된 우아함",
+            "pairings": [
+              "#FFFFFF",
+              "#D6C6A6",
+              "#D4AF37",
+              "#E97E68",
+              "#708090",
+              "#B0C4DE"
+            ]
+          },
+          {
+            "name": "Ochre",
+            "family": "Standard Oranges",
+            "hex": "#CC7722",
+            "mood": "중명도, 중채도, 흙기 섞인 따뜻한 오렌지 / 안정감, 내추럴, 신뢰감, 지속성",
+            "pairings": [
+              "#1C2E4A",
+              "#4C7A77",
+              "#D7B899",
+              "#F3E9DA",
+              "#6E7B8B",
+              "#B6B995"
+            ]
+          },
+          {
+            "name": "Apricot",
+            "family": "Natural Oranges",
+            "hex": "#FFB27F",
+            "mood": "밝은 명도, 낮은 채도, 살짝 핑크빛이 도는 부드러운 오렌지 / 따뜻함, 부드러움, 친근함, 여유, 자연스러움",
+            "pairings": [
+              "#F8F3ED",
+              "#B9B4A5",
+              "#9A9E56",
+              "#F88379",
+              "#6B90B4",
+              "#7E5A45"
+            ]
+          }
+        ],
+        "palette_roles": {
+          "primary": {
+            "name": "Navy Blue",
+            "family": "Deep Blues",
+            "hex": "#000080",
+            "mood": "저명도, 중채도, 차가운 온도감이 강한 블루 계열 / 신뢰, 권위, 집중, 전문성, 절제된 우아함",
+            "pairings": [
+              "#FFFFFF",
+              "#D6C6A6",
+              "#D4AF37",
+              "#E97E68",
+              "#708090",
+              "#B0C4DE"
+            ]
+          },
+          "accent": {
+            "name": "Ochre",
+            "family": "Standard Oranges",
+            "hex": "#CC7722",
+            "mood": "중명도, 중채도, 흙기 섞인 따뜻한 오렌지 / 안정감, 내추럴, 신뢰감, 지속성",
+            "pairings": [
+              "#1C2E4A",
+              "#4C7A77",
+              "#D7B899",
+              "#F3E9DA",
+              "#6E7B8B",
+              "#B6B995"
+            ]
+          },
+          "surface_tint": {
+            "name": "Apricot",
+            "family": "Natural Oranges",
+            "hex": "#FFB27F",
+            "mood": "밝은 명도, 낮은 채도, 살짝 핑크빛이 도는 부드러운 오렌지 / 따뜻함, 부드러움, 친근함, 여유, 자연스러움",
+            "pairings": [
+              "#F8F3ED",
+              "#B9B4A5",
+              "#9A9E56",
+              "#F88379",
+              "#6B90B4",
+              "#7E5A45"
+            ]
+          }
+        },
+        "active_palette": {
+          "candidate_id": "signature-1",
+          "selection_mode": "brand-guided",
+          "roles": {
+            "primary": {
+              "name": "Navy Blue",
+              "family": "Deep Blues",
+              "hex": "#000080",
+              "mood": "저명도, 중채도, 차가운 온도감이 강한 블루 계열 / 신뢰, 권위, 집중, 전문성, 절제된 우아함"
+            },
+            "accent": {
+              "name": "Ochre",
+              "family": "Standard Oranges",
+              "hex": "#CC7722",
+              "mood": "중명도, 중채도, 흙기 섞인 따뜻한 오렌지 / 안정감, 내추럴, 신뢰감, 지속성"
+            },
+            "surface_tint": {
+              "name": "Apricot",
+              "family": "Natural Oranges",
+              "hex": "#FFB27F",
+              "mood": "밝은 명도, 낮은 채도, 살짝 핑크빛이 도는 부드러운 오렌지 / 따뜻함, 부드러움, 친근함, 여유, 자연스러움"
+            }
+          }
+        },
+        "palette_candidates": [
+          {
+            "id": "signature-1",
+            "label": "Signature",
+            "score": 66.82,
+            "rationale": [
+              "Navy Blue matches brand tone keywords.",
+              "Ochre is inside preferred families.",
+              "Apricot matches brand tone keywords."
+            ],
+            "strategy_snapshot": {
+              "temperature": "warm",
+              "contrast": "balanced",
+              "diversity": "balanced",
+              "surface_style": "tinted"
+            },
+            "roles": {
+              "primary": {
+                "name": "Navy Blue",
+                "family": "Deep Blues",
+                "hex": "#000080",
+                "mood": "저명도, 중채도, 차가운 온도감이 강한 블루 계열 / 신뢰, 권위, 집중, 전문성, 절제된 우아함"
+              },
+              "accent": {
+                "name": "Ochre",
+                "family": "Standard Oranges",
+                "hex": "#CC7722",
+                "mood": "중명도, 중채도, 흙기 섞인 따뜻한 오렌지 / 안정감, 내추럴, 신뢰감, 지속성"
+              },
+              "surface_tint": {
+                "name": "Apricot",
+                "family": "Natural Oranges",
+                "hex": "#FFB27F",
+                "mood": "밝은 명도, 낮은 채도, 살짝 핑크빛이 도는 부드러운 오렌지 / 따뜻함, 부드러움, 친근함, 여유, 자연스러움"
+              }
+            }
+          },
+          {
+            "id": "soft-spread-2",
+            "label": "Soft Spread",
+            "score": 65.81,
+            "rationale": [
+              "Ochre is inside preferred families.",
+              "Amber matches brand tone keywords.",
+              "Peach Puff is inside preferred families."
+            ],
+            "strategy_snapshot": {
+              "temperature": "warm",
+              "contrast": "soft",
+              "diversity": "balanced",
+              "surface_style": "airy"
+            },
+            "roles": {
+              "primary": {
+                "name": "Ochre",
+                "family": "Standard Oranges",
+                "hex": "#CC7722",
+                "mood": "중명도, 중채도, 흙기 섞인 따뜻한 오렌지 / 안정감, 내추럴, 신뢰감, 지속성"
+              },
+              "accent": {
+                "name": "Amber",
+                "family": "Standard Yellows",
+                "hex": "#FFBF00",
+                "mood": "중명도, 중채도, 대중적인 옐로 오렌지 계열의 톤 / 따뜻함, 세련됨, 고급스러움, 안정감"
+              },
+              "surface_tint": {
+                "name": "Peach Puff",
+                "family": "Pastel Oranges",
+                "hex": "#FFDAB9",
+                "mood": "고명도, 저채도, 오렌지와 핑크 사이의 파스텔 계열 / 따뜻함, 부드러움, 순수함, 친근함, 생기"
+              }
+            }
+          }
+        ],
+        "rules": [
+          "컬러 레퍼런스의 mood와 pairings를 semantic token 설계의 출발점으로 사용",
+          "chosen palette는 semantic roles로 번역하고 raw reference color를 그대로 남용하지 않기",
+          "surface/text/border 대비는 레퍼런스보다 접근성 기준을 우선"
+        ]
+      }
+    },
+    "typography": {
+      "families": [
+        "display",
+        "text",
+        "mono"
+      ],
+      "size_scale": [
+        "xs",
+        "sm",
+        "md",
+        "lg",
+        "xl",
+        "2xl",
+        "3xl",
+        "4xl"
+      ],
+      "rules": [
+        "display는 마케팅/영웅 구역으로 제한",
+        "text는 제품 본문과 UI 라벨의 기본",
+        "mono는 데이터와 shortcut hint에 제한"
+      ]
+    },
+    "spacing": {
+      "scale": [
+        0,
+        2,
+        4,
+        8,
+        12,
+        16,
+        24,
+        32,
+        48,
+        64,
+        96
+      ],
+      "density_modes": [
+        "comfortable",
+        "compact"
+      ]
+    },
+    "radius": {
+      "scale": [
+        "none",
+        "sm",
+        "md",
+        "lg",
+        "xl",
+        "pill"
+      ],
+      "rule": "라운딩은 브랜드 성격을 드러내지만 컴포넌트 계층별로 제한적으로 사용"
+    },
+    "motion": {
+      "durations_ms": [
+        0,
+        80,
+        120,
+        180,
+        240,
+        320
+      ],
+      "easing_tokens": [
+        "standard",
+        "enter",
+        "exit",
+        "emphasized"
+      ],
+      "rule": "모션은 상태 설명용이며 과장된 장식 효과는 금지"
+    },
+    "elevation": {
+      "levels": [
+        "flat",
+        "raised",
+        "overlay",
+        "modal"
+      ],
+      "rule": "그림자보다 layer 의미가 먼저 드러나야 함"
+    }
+  },
+  "brand_alignment": {
+    "visual_keywords": [
+      "cartographic depth",
+      "editorial dashboard hierarchy",
+      "intelligence briefing panels",
+      "measured navy-ochre accents"
+    ],
+    "interaction_keywords": [
+      "progressive disclosure",
+      "contextual overlays",
+      "confident comparison",
+      "low-noise motion"
+    ],
+    "system_name": "K-CIA Intelligence System"
+  }
+}

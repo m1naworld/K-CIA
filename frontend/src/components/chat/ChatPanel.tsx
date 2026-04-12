@@ -5,7 +5,6 @@ import { MessageSquare, X, Maximize2, Minimize2, Trash2 } from "lucide-react";
 import { useChatStore } from "@/store/chatStore";
 import { ChatMessages } from "./ChatMessages";
 import { ChatInput } from "./ChatInput";
-
 import { useMapStore } from "@/store/mapStore";
 
 export default function ChatPanel() {
@@ -13,13 +12,12 @@ export default function ChatPanel() {
     useChatStore();
   const { sidebarOpen } = useMapStore();
 
-  // Floating button when closed
   if (!isOpen) {
     return (
       <Button
         onClick={toggleOpen}
-        className={`fixed bottom-6 z-50 h-14 w-14 rounded-full bg-blue-600 shadow-lg transition-all duration-300 hover:bg-blue-500 ${
-          sidebarOpen ? "right-[344px]" : "right-6"
+        className={`intel-fab fixed bottom-4 z-50 h-16 w-16 rounded-[1.4rem] border border-border/60 transition-all duration-300 hover:scale-[1.02] hover:brightness-105 ${
+          sidebarOpen ? "right-4 md:right-[22.5rem] 2xl:right-[24.5rem]" : "right-4 md:right-6"
         }`}
         size="icon"
       >
@@ -28,28 +26,36 @@ export default function ChatPanel() {
     );
   }
 
-  // Panel dimensions
-  const panelWidth = isExpanded ? "w-[500px]" : "w-[400px]";
-  const panelHeight = isExpanded ? "h-[600px]" : "h-[500px]";
+  const panelWidth = isExpanded
+    ? "w-[min(560px,calc(100vw-1.5rem))]"
+    : "w-[min(440px,calc(100vw-1.5rem))]";
+  const panelHeight = isExpanded
+    ? "h-[min(680px,calc(100vh-3rem))]"
+    : "h-[min(560px,calc(100vh-3rem))]";
 
   return (
     <div
-      className={`fixed bottom-6 z-50 flex flex-col rounded-xl border border-slate-200 bg-white text-slate-900 shadow-2xl transition-all duration-300 dark:border-white/10 dark:bg-gray-950 dark:text-white ${panelWidth} ${panelHeight} ${
-        sidebarOpen ? "right-[344px]" : "right-6"
+      className={`intel-panel fixed bottom-4 z-50 flex flex-col rounded-[1.75rem] text-foreground transition-all duration-300 ${panelWidth} ${panelHeight} ${
+        sidebarOpen ? "right-4 md:right-[22.5rem] 2xl:right-[24.5rem]" : "right-4 md:right-6"
       }`}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-white/10">
-        <h3 className="flex items-center gap-2 text-sm font-medium text-slate-900 dark:text-white">
-          <MessageSquare className="h-4 w-4 text-blue-400" />
-          AI 상권 컨설턴트
-        </h3>
+      <div className="flex items-start justify-between border-b border-border/60 px-5 py-4">
+        <div>
+          <div className="intel-kicker">AI Consultant Overlay</div>
+          <h3 className="mt-2 flex items-center gap-2 text-sm font-medium text-foreground">
+            <MessageSquare className="intel-text-primary h-4 w-4" />
+            K-CIA 상권 컨설턴트
+          </h3>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            지도에서 보고 있는 구역 맥락을 이어받아 추천, 리스크, 실행 항목을 정리합니다.
+          </p>
+        </div>
         <div className="flex items-center gap-1">
           {messages.length > 0 && (
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-white/50 dark:hover:bg-white/10 dark:hover:text-white"
+              className="h-8 w-8 text-muted-foreground hover:bg-accent/60 hover:text-foreground"
               onClick={clearMessages}
               title="대화 초기화"
             >
@@ -59,7 +65,7 @@ export default function ChatPanel() {
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-white/50 dark:hover:bg-white/10 dark:hover:text-white"
+            className="h-8 w-8 text-muted-foreground hover:bg-accent/60 hover:text-foreground"
             onClick={toggleExpanded}
             title={isExpanded ? "축소" : "확장"}
           >
@@ -72,7 +78,7 @@ export default function ChatPanel() {
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-white/50 dark:hover:bg-white/10 dark:hover:text-white"
+            className="h-8 w-8 text-muted-foreground hover:bg-accent/60 hover:text-foreground"
             onClick={toggleOpen}
             title="닫기"
           >
@@ -81,14 +87,16 @@ export default function ChatPanel() {
         </div>
       </div>
 
-      {/* Messages area */}
-      <div className="flex-1 overflow-hidden px-4 py-3">
-        <ChatMessages />
+      <div className="flex-1 overflow-hidden px-4 py-4">
+        <div className="intel-panel-soft flex h-full flex-col rounded-[1.4rem] px-4 py-3">
+          <ChatMessages />
+        </div>
       </div>
 
-      {/* Input area */}
       <div className="px-4 pb-4">
-        <ChatInput />
+        <div className="intel-panel-soft rounded-[1.4rem] px-4 py-3">
+          <ChatInput />
+        </div>
       </div>
     </div>
   );

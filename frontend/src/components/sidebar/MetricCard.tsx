@@ -26,16 +26,16 @@ export function MetricCard({
   variant = "default",
 }: MetricCardProps) {
   const borderColor = {
-    default: "border-slate-200 dark:border-white/10",
-    warning: "border-amber-500/30",
-    danger: "border-red-500/30",
+    default: "border-white/10",
+    warning: "border-[hsl(var(--intel-ochre)/0.3)]",
+    danger: "border-[hsl(var(--intel-danger)/0.3)]",
   }[variant];
 
   return (
-    <Card className={`bg-white/90 text-slate-900 dark:bg-gray-900/60 dark:text-white ${borderColor} backdrop-blur-sm`}>
-      <CardHeader className="pb-2">
+    <Card className={`intel-panel-soft text-foreground ${borderColor} rounded-[1.35rem]`}>
+      <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-white/80">
+          <CardTitle className="flex items-center gap-2 text-sm font-medium text-foreground">
             {icon}
             {title}
           </CardTitle>
@@ -57,8 +57,8 @@ function GrowthBadge({ rate }: { rate: number }) {
       variant="outline"
       className={`text-xs ${
         isPositive
-          ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
-          : "border-red-500/50 bg-red-500/10 text-red-400"
+          ? "intel-badge-primary"
+          : "intel-badge-danger"
       }`}
     >
       {isPositive ? "+" : ""}
@@ -73,7 +73,7 @@ interface MiniChartProps {
   color?: string;
 }
 
-export function MiniChart({ data, color = "#60a5fa" }: MiniChartProps) {
+export function MiniChart({ data, color = "#7F1734" }: MiniChartProps) {
   if (!data || data.length === 0) return null;
 
   return (
@@ -89,9 +89,9 @@ export function MiniChart({ data, color = "#60a5fa" }: MiniChartProps) {
           <XAxis dataKey="label" hide />
           <Tooltip
             contentStyle={{
-              backgroundColor: "rgba(17, 24, 39, 0.9)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              borderRadius: "6px",
+              backgroundColor: "rgba(8, 15, 29, 0.94)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: "12px",
               fontSize: "11px",
             }}
             formatter={(value) => [(value as number).toLocaleString(), ""]}
@@ -134,12 +134,12 @@ export function BarDistribution({ data, labelMap }: BarDistributionProps) {
           >
             <div className="relative h-8 w-full">
               <div
-                className="absolute bottom-0 w-full rounded-t bg-blue-500/60 transition-all group-hover:bg-blue-400"
+                className="intel-meter-primary absolute bottom-0 w-full rounded-t transition-all group-hover:brightness-110"
                 style={{ height: `${height}%` }}
               />
             </div>
-            <span className="mt-1 text-[9px] text-slate-500 dark:text-white/40">{label}</span>
-            <div className="pointer-events-none absolute -top-6 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded bg-white px-1.5 py-0.5 text-[10px] text-slate-700 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 dark:bg-gray-800 dark:text-white">
+            <span className="mt-1 text-[9px] text-muted-foreground">{label}</span>
+            <div className="pointer-events-none absolute -top-7 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full border border-border/60 bg-popover px-2 py-0.5 text-[10px] text-popover-foreground opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
               {value.toLocaleString()}
             </div>
           </div>
@@ -165,14 +165,14 @@ export function StatRow({ label, value, unit, highlight }: StatRowProps) {
 
   return (
     <div className="flex items-center justify-between py-1">
-      <span className="text-xs text-slate-500 dark:text-white/50">{label}</span>
+      <span className="text-xs text-muted-foreground">{label}</span>
       <span
         className={`text-sm font-medium ${
-          highlight ? "text-amber-500 dark:text-amber-300" : "text-slate-900 dark:text-white"
+          highlight ? "intel-text-accent" : "text-foreground"
         }`}
       >
         {displayValue}
-        {unit && <span className="ml-0.5 text-xs text-slate-500 dark:text-white/50">{unit}</span>}
+        {unit && <span className="ml-0.5 text-xs text-muted-foreground">{unit}</span>}
       </span>
     </div>
   );
@@ -191,7 +191,7 @@ export function WarningList({ warnings }: WarningListProps) {
       {warnings.map((warning, i) => (
         <li
           key={i}
-          className="flex items-start gap-2 text-xs text-amber-700 dark:text-amber-300/90"
+          className="intel-text-accent flex items-start gap-2 text-xs"
         >
           <span className="mt-0.5">⚠</span>
           <span>{warning}</span>

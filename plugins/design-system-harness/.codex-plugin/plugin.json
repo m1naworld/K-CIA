@@ -1,0 +1,33 @@
+{
+  "name": "design-system-harness",
+  "version": "0.1.0",
+  "description": "Skills for applying design-system-harness outputs inside an implementation repository.",
+  "author": {
+    "name": "Design Ontology Harness"
+  },
+  "license": "MIT",
+  "keywords": [
+    "design-system",
+    "tokens",
+    "ui",
+    "codex",
+    "skills"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Design System Harness",
+    "shortDescription": "Apply design-system artifacts inside a real implementation repo",
+    "longDescription": "Provides Codex skills for reading design-system artifacts and implementing tokens, components, and UI changes that stay aligned with your system spec.",
+    "developerName": "Design Ontology Harness",
+    "category": "Coding",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Implement UI changes using the local design-system artifacts and component inventory"
+    ],
+    "screenshots": [],
+    "brandColor": "#6B7B8D"
+  }
+}

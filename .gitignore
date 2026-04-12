@@ -47,3 +47,4 @@ npm-debug.log*
 dist/
 build/
 *.egg-info/
+.design-ontology/build/

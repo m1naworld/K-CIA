@@ -37,18 +37,18 @@ const HOUR_KEY_TO_SLOT: Record<string, string> = {
 
 /** Color scale for heatmap cells: 0 (low) ~ 1 (high) */
 function heatmapColor(t: number): string {
-  // blue-50 → amber-500 → red-500
+  // navy tint → apricot → ochre
   if (t < 0.5) {
     const s = t / 0.5;
-    const r = Math.round(239 + (245 - 239) * s);
-    const g = Math.round(246 + (158 - 246) * s);
-    const b = Math.round(255 + (11 - 255) * s);
+    const r = Math.round(229 + (255 - 229) * s);
+    const g = Math.round(234 + (178 - 234) * s);
+    const b = Math.round(247 + (127 - 247) * s);
     return `rgb(${r},${g},${b})`;
   }
   const s = (t - 0.5) / 0.5;
-  const r = Math.round(245 + (239 - 245) * s);
-  const g = Math.round(158 + (68 - 158) * s);
-  const b = Math.round(11 + (68 - 11) * s);
+  const r = Math.round(255 + (204 - 255) * s);
+  const g = Math.round(178 + (119 - 178) * s);
+  const b = Math.round(127 + (34 - 127) * s);
   return `rgb(${r},${g},${b})`;
 }
 
@@ -87,28 +87,28 @@ export default function TimeSlotCard({ data, flow, operatingStrategy }: Props) {
           {/* Peak slots */}
           <div className="mb-2">
             <div className="mb-1 flex items-center gap-1.5">
-              <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />
-              <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">피크</span>
+              <span className="intel-surface-accent inline-block h-2 w-2 rounded-full border" />
+              <span className="intel-text-accent text-[10px] font-medium">피크</span>
             </div>
             <div className="space-y-1">
               {peakSlots.map((slot) => (
                 <div key={slot.hour_range} className="flex items-center gap-2">
                   <Badge
                     variant="outline"
-                    className="w-11 shrink-0 justify-center border-amber-500/40 bg-amber-500/10 px-1 text-[10px] text-amber-500 dark:text-amber-400"
+                    className="intel-badge-accent w-11 shrink-0 justify-center px-1 text-[10px]"
                   >
                     {slot.label}
                   </Badge>
                   <div className="relative h-2.5 flex-1 overflow-hidden rounded-full bg-slate-200/70 dark:bg-white/5">
                     <div
-                      className="h-full rounded-full bg-amber-500/70 transition-all"
+                      className="intel-meter-accent h-full rounded-full transition-all"
                       style={{ width: `${slot.flow_ratio * 100}%` }}
                     />
                   </div>
                   <span className="w-8 text-right text-[10px] text-slate-600 dark:text-white/50">
                     {(slot.flow_ratio * 100).toFixed(0)}%
                   </span>
-                  <span className="w-8 text-right text-[10px] text-amber-600 dark:text-amber-400/70">
+                  <span className="intel-text-accent w-8 text-right text-[10px]">
                     x{slot.staff_ratio.toFixed(1)}
                   </span>
                 </div>
@@ -119,28 +119,28 @@ export default function TimeSlotCard({ data, flow, operatingStrategy }: Props) {
           {/* Off-peak slots */}
           <div>
             <div className="mb-1 flex items-center gap-1.5">
-              <span className="inline-block h-2 w-2 rounded-full bg-violet-500/60" />
-              <span className="text-[10px] font-medium text-violet-500 dark:text-violet-400">오프피크</span>
+              <span className="intel-surface-primary inline-block h-2 w-2 rounded-full border" />
+              <span className="intel-text-primary text-[10px] font-medium">오프피크</span>
             </div>
             <div className="space-y-1">
               {offPeakSlots.map((slot) => (
                 <div key={slot.hour_range} className="flex items-center gap-2">
                   <Badge
                     variant="outline"
-                    className="w-11 shrink-0 justify-center border-violet-500/30 bg-violet-500/10 px-1 text-[10px] text-violet-400 dark:text-violet-300"
+                    className="intel-badge-primary w-11 shrink-0 justify-center px-1 text-[10px]"
                   >
                     {slot.label}
                   </Badge>
                   <div className="relative h-2.5 flex-1 overflow-hidden rounded-full bg-slate-200/70 dark:bg-white/5">
                     <div
-                      className="h-full rounded-full bg-violet-500/40 transition-all"
+                      className="intel-meter-primary h-full rounded-full opacity-70 transition-all"
                       style={{ width: `${slot.flow_ratio * 100}%` }}
                     />
                   </div>
                   <span className="w-8 text-right text-[10px] text-slate-600 dark:text-white/50">
                     {(slot.flow_ratio * 100).toFixed(0)}%
                   </span>
-                  <span className="w-8 text-right text-[10px] text-violet-500/70 dark:text-violet-400/50">
+                  <span className="intel-text-primary w-8 text-right text-[10px] opacity-80">
                     x{slot.staff_ratio.toFixed(1)}
                   </span>
                 </div>
@@ -173,7 +173,7 @@ export default function TimeSlotCard({ data, flow, operatingStrategy }: Props) {
                   <div className="relative h-3 flex-1 overflow-hidden rounded-full bg-slate-200/70 dark:bg-white/5">
                     <div
                       className={`h-full rounded-full transition-all ${
-                        isPeak ? "bg-amber-500/70" : "bg-violet-500/40"
+                        isPeak ? "intel-meter-accent" : "intel-meter-primary opacity-65"
                       }`}
                       style={{ width: `${width}%` }}
                     />
@@ -194,7 +194,7 @@ export default function TimeSlotCard({ data, flow, operatingStrategy }: Props) {
           <span className="text-xs text-slate-500 dark:text-white/50">피크 요일</span>
           <Badge
             variant="outline"
-            className="border-violet-500/50 bg-violet-500/10 text-xs text-violet-300"
+            className="intel-badge-primary text-xs"
           >
             {data.peak_weekday}요일
           </Badge>
@@ -275,13 +275,13 @@ export default function TimeSlotCard({ data, flow, operatingStrategy }: Props) {
               <div className="flex-1">
                 <div className="mb-1 flex items-center justify-between">
                   <span className="text-[10px] text-slate-600 dark:text-white/50">평일</span>
-                  <span className="text-[10px] font-medium text-blue-500 dark:text-blue-400">
+                  <span className="intel-text-primary text-[10px] font-medium">
                     {(weekdayWeekend.weekdayRatio * 100).toFixed(0)}%
                   </span>
                 </div>
                 <div className="h-3 w-full overflow-hidden rounded-full bg-slate-200/70 dark:bg-white/5">
                   <div
-                    className="h-full rounded-full bg-blue-500/60 transition-all"
+                    className="intel-meter-primary h-full rounded-full transition-all"
                     style={{ width: `${weekdayWeekend.weekdayRatio * 100}%` }}
                   />
                 </div>
@@ -293,13 +293,13 @@ export default function TimeSlotCard({ data, flow, operatingStrategy }: Props) {
               <div className="flex-1">
                 <div className="mb-1 flex items-center justify-between">
                   <span className="text-[10px] text-slate-600 dark:text-white/50">주말</span>
-                  <span className="text-[10px] font-medium text-orange-500 dark:text-orange-400">
+                  <span className="intel-text-accent text-[10px] font-medium">
                     {(weekdayWeekend.weekendRatio * 100).toFixed(0)}%
                   </span>
                 </div>
                 <div className="h-3 w-full overflow-hidden rounded-full bg-slate-200/70 dark:bg-white/5">
                   <div
-                    className="h-full rounded-full bg-orange-500/60 transition-all"
+                    className="intel-meter-accent h-full rounded-full transition-all"
                     style={{ width: `${weekdayWeekend.weekendRatio * 100}%` }}
                   />
                 </div>
@@ -318,13 +318,13 @@ export default function TimeSlotCard({ data, flow, operatingStrategy }: Props) {
                       <div className="relative h-8 w-full">
                         <div
                           className={`absolute bottom-0 w-full rounded-t transition-all group-hover:opacity-80 ${
-                            isWeekend ? "bg-orange-500/60" : "bg-blue-500/50"
+                            isWeekend ? "intel-meter-accent" : "intel-meter-primary opacity-75"
                           }`}
                           style={{ height: `${ratio * 100}%` }}
                         />
                       </div>
                       <span className={`mt-0.5 text-[9px] ${
-                        isWeekend ? "font-medium text-orange-500 dark:text-orange-400" : "text-slate-500 dark:text-white/40"
+                        isWeekend ? "intel-text-accent font-medium" : "text-slate-500 dark:text-white/40"
                       }`}>
                         {label}
                       </span>

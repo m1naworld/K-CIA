@@ -1,0 +1,3 @@
+display_name: Design System Harness
+short_description: Apply local design-system artifacts inside implementation repos
+default_prompt: Implement UI changes using the design-system artifacts in this repository

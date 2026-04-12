@@ -9,7 +9,6 @@ export function ChatMessages() {
   const messages = useChatStore((state) => state.messages);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -18,9 +17,14 @@ export function ChatMessages() {
 
   if (messages.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center text-center text-sm text-slate-500 dark:text-white/40">
-        <p>성수동 상권에 대해 질문해보세요.</p>
-        <p className="mt-1 text-xs">예: &quot;카페 매출 Top3 추천해줘&quot;</p>
+      <div className="flex h-full flex-col items-center justify-center text-center text-sm text-muted-foreground">
+        <div className="intel-kicker">Evidence-led prompts</div>
+        <p className="mt-3 text-sm font-medium text-foreground">
+          지금 보고 있는 상권을 기준으로 질문해보세요.
+        </p>
+        <p className="mt-2 text-xs leading-6 text-muted-foreground">
+          예: &quot;카페 매출이 높은 구역 3곳을 리스크와 함께 추천해줘&quot;
+        </p>
       </div>
     );
   }

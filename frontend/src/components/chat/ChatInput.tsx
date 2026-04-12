@@ -28,13 +28,13 @@ export function ChatInput() {
   );
 
   return (
-    <div className="flex items-end gap-2 border-t border-slate-200 pt-3 dark:border-white/10">
+    <div className="flex items-end gap-3 border-t border-white/10 pt-3">
       <textarea
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="질문을 입력하세요..."
-        className="max-h-24 min-h-[40px] flex-1 resize-none rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:text-white dark:placeholder-white/40"
+        placeholder="예: 카페 입지로 괜찮은 구역을 근거와 함께 추천해줘"
+        className="intel-control max-h-28 min-h-[44px] flex-1 resize-none rounded-[1rem] border-0 bg-transparent px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/20"
         disabled={isStreaming}
         rows={1}
       />
@@ -42,16 +42,15 @@ export function ChatInput() {
         <Button
           variant="ghost"
           size="icon"
-          className="h-10 w-10 shrink-0 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+          className="intel-text-danger h-11 w-11 shrink-0 rounded-[1rem] hover:bg-destructive/10 hover:text-destructive"
           onClick={cancel}
         >
           <Square className="h-4 w-4 fill-current" />
         </Button>
       ) : (
         <Button
-          variant="ghost"
           size="icon"
-          className="h-10 w-10 shrink-0 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300"
+          className="intel-button-primary h-11 w-11 shrink-0 rounded-[1rem]"
           onClick={handleSubmit}
           disabled={!input.trim()}
         >

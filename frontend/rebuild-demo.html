@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>K-CIA Sidebar Briefing — Rebuild Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#0B0D14;color:#eee;-webkit-font-smoothing:antialiased}
+
+.page-header{background:linear-gradient(135deg,#000080 0%,#0B0D14 100%);padding:24px 32px;border-bottom:2px solid #CC7722}
+.page-header h1{font-size:18px;font-weight:700;letter-spacing:-0.02em}
+.page-header h1 b{color:#CC7722}
+.page-header p{color:#8888A0;font-size:12px;margin-top:4px}
+
+.comparison{display:grid;grid-template-columns:1fr 1fr;max-width:1100px;margin:24px auto;gap:24px;padding:0 24px}
+
+.panel{border-radius:12px;overflow:hidden}
+.panel-label{display:inline-block;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-bottom:12px}
+.panel-label--before{background:#CC7722;color:#0B0D14}
+.panel-label--after{background:#CC7722;color:#0B0D14}
+
+/* ============================================================
+   BEFORE: 현재 K-CIA 사이드바 (재현)
+   intel-panel-soft 스타일 기반
+   ============================================================ */
+
+.before-sidebar{
+  background:linear-gradient(180deg,rgba(26,30,48,0.96),rgba(20,23,38,0.92));
+  border:1px solid rgba(60,65,90,0.82);
+  border-radius:12px;
+  width:100%;
+  box-shadow:0 30px 70px -42px rgba(3,8,27,0.82);
+}
+
+.before-header{
+  padding:16px 20px;
+  border-bottom:1px solid rgba(60,65,90,0.5);
+  background:rgba(15,18,30,0.7);
+  backdrop-filter:blur(18px);
+}
+.before-kicker{
+  font-family:'JetBrains Mono',monospace;
+  font-size:0.68rem;letter-spacing:0.16em;text-transform:uppercase;color:#8888A0;
+}
+.before-title{font-size:14px;font-weight:600;margin-top:8px;letter-spacing:-0.03em}
+.before-sub{font-size:12px;color:#8888A0;margin-top:4px}
+.before-desc{font-size:12px;color:#6B6B82;margin-top:8px;line-height:1.5}
+
+.before-content{padding:16px;display:flex;flex-direction:column;gap:16px}
+
+.before-badge{
+  display:inline-block;font-size:11px;padding:3px 10px;
+  border-radius:999px;border:1px solid rgba(204,119,34,0.34);
+  background:rgba(204,119,34,0.15);color:#FFB27F;
+}
+
+/* 현재 MetricCard: 모든 카드가 같은 무게 */
+.before-card{
+  background:linear-gradient(180deg,rgba(30,35,55,0.82),rgba(30,35,55,0.66));
+  border:1px solid rgba(60,65,90,0.7);
+  border-radius:22px;
+  padding:16px 20px;
+  box-shadow:0 18px 42px -30px rgba(3,8,27,0.65);
+  backdrop-filter:blur(14px);
+}
+.before-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.before-card-title{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500}
+.before-card-title svg{width:16px;height:16px;color:#8888A0}
+.before-growth{font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid rgba(0,0,128,0.32);background:rgba(0,0,128,0.2);color:#FFB27F}
+.before-growth--neg{border-color:rgba(220,60,60,0.34);background:rgba(220,60,60,0.15);color:#FF8A8A}
+
+.before-stat-row{display:flex;align-items:center;justify-content:space-between;padding:4px 0}
+.before-stat-label{font-size:12px;color:#8888A0}
+.before-stat-value{font-size:14px;font-weight:500}
+.before-stat-value--highlight{color:#CC7722}
+.before-stat-unit{font-size:12px;color:#6B6B82;margin-left:2px}
+
+.before-mini-chart{height:48px;background:linear-gradient(180deg,rgba(127,23,52,0.15),transparent);border-radius:8px;margin-top:8px;display:flex;align-items:flex-end;padding:0 4px 4px}
+.before-chart-bar{flex:1;background:rgba(127,23,52,0.4);border-radius:2px 2px 0 0;margin:0 1px;min-height:4px}
+
+.before-bar-dist{display:flex;gap:2px;margin-top:8px}
+.before-bar-col{flex:1;display:flex;flex-direction:column;align-items:center}
+.before-bar-fill{width:100%;border-radius:2px 2px 0 0;background:rgba(0,0,128,0.4)}
+.before-bar-label{font-size:9px;color:#6B6B82;margin-top:4px}
+
+.before-compete-grid{display:flex;gap:16px;margin-top:8px}
+.before-compete-item{flex:1}
+.before-compete-item p:first-child{font-size:10px;color:#6B6B82}
+.before-compete-item p:last-child{font-size:14px;font-weight:500;margin-top:2px}
+.before-compete-item .up{color:#4A8B5C}
+.before-compete-item .down{color:#DC3C3C}
+
+/* ============================================================
+   AFTER: Rebuild — 같은 데이터, 디자인 시스템 기반 재구성
+   핵심 변화:
+   1. 카드 간 시각적 위계 (주요 지표 강조, 보조 지표 축소)
+   2. 숫자 타이포그래피 강화 (큰 숫자는 28px/700, 모노스페이스)
+   3. 좌측 accent bar로 카테고리 구분
+   4. 미니차트에 ochre gradient 일관 적용
+   5. spacing 리듬 정리 (8-16-24 체계)
+   6. 헤더에 정보 밀도 높이기 (구역명 + 기준분기 한 줄로)
+   ============================================================ */
+
+:root{
+  --navy:#000080;--navy-light:rgba(0,0,128,0.12);
+  --ochre:#CC7722;--ochre-dim:rgba(204,119,34,0.15);--ochre-light:#FFB27F;
+  --surface-0:#0E1019;--surface-1:#141826;--surface-2:#1C2035;--surface-3:#252940;
+  --ink:#F0ECE4;--ink-2:#A0A0B8;--ink-3:#6B6B82;
+  --border:rgba(60,65,90,0.6);--border-sub:rgba(60,65,90,0.35);
+  --sage:#4A8B5C;--danger:#DC3C3C;
+  --mono:'JetBrains Mono','SF Mono',monospace;
+  --sp-4:4px;--sp-8:8px;--sp-12:12px;--sp-16:16px;--sp-24:24px;
+  --r-sm:6px;--r-md:10px;--r-lg:16px;
+  --motion:140ms ease-out;
+}
+
+.after-sidebar{
+  background:var(--surface-1);
+  border:1px solid var(--border);
+  border-radius:12px;width:100%;
+  box-shadow:0 24px 60px -32px rgba(3,8,27,0.9);
+}
+
+/* 헤더: 더 compact하고 정보 밀도 높게 */
+.after-header{
+  padding:var(--sp-16) var(--sp-24);
+  border-bottom:1px solid var(--border-sub);
+  background:linear-gradient(180deg,var(--surface-2),var(--surface-1));
+}
+.after-header-top{display:flex;align-items:center;justify-content:space-between}
+.after-kicker{
+  font-family:var(--mono);
+  font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ochre);font-weight:500;
+}
+.after-qtr-badge{
+  font-family:var(--mono);font-size:10px;font-weight:500;
+  color:var(--ink-2);padding:2px 8px;border-radius:4px;
+  background:var(--ochre-dim);border:1px solid rgba(204,119,34,0.25);
+}
+.after-area-name{font-size:16px;font-weight:700;margin-top:var(--sp-8);letter-spacing:-0.02em;color:var(--ink)}
+.after-area-sub{font-size:12px;color:var(--ink-3);margin-top:2px}
+
+.after-content{padding:var(--sp-16) var(--sp-16);display:flex;flex-direction:column;gap:var(--sp-12)}
+
+/* === Hero Metric: 가장 중요한 1개 지표를 크게 === */
+.after-hero-metric{
+  background:linear-gradient(135deg,var(--surface-2),var(--surface-3));
+  border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:var(--sp-24);position:relative;overflow:hidden;
+}
+.after-hero-metric::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--navy),var(--ochre));
+}
+.after-hero-label{
+  font-family:var(--mono);font-size:10px;font-weight:500;
+  letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-2);
+}
+.after-hero-row{display:flex;align-items:baseline;gap:var(--sp-12);margin-top:var(--sp-8)}
+.after-hero-value{
+  font-family:var(--mono);font-size:32px;font-weight:700;
+  color:var(--ink);letter-spacing:-0.03em;line-height:1;
+}
+.after-hero-unit{font-size:14px;color:var(--ink-3);font-weight:500}
+.after-hero-growth{
+  margin-left:auto;font-family:var(--mono);font-size:13px;font-weight:600;
+  padding:3px 10px;border-radius:var(--r-sm);
+}
+.after-hero-growth--up{background:rgba(74,139,92,0.15);color:var(--sage);border:1px solid rgba(74,139,92,0.25)}
+.after-hero-growth--down{background:rgba(220,60,60,0.12);color:var(--danger);border:1px solid rgba(220,60,60,0.2)}
+
+.after-hero-chart{height:52px;margin-top:var(--sp-16);display:flex;align-items:flex-end;gap:2px;padding:0 2px}
+.after-hero-chart-bar{
+  flex:1;border-radius:3px 3px 0 0;min-height:3px;
+  background:linear-gradient(180deg,var(--ochre),rgba(204,119,34,0.2));
+  transition:opacity var(--motion);
+}
+.after-hero-chart-bar:hover{opacity:0.7}
+
+/* === Compact Metric Card: 보조 지표 2열 === */
+.after-metrics-row{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-8)}
+
+.after-metric-sm{
+  background:var(--surface-2);border:1px solid var(--border-sub);
+  border-radius:var(--r-md);padding:var(--sp-12) var(--sp-16);
+  position:relative;
+}
+.after-metric-sm__bar{position:absolute;top:0;left:0;bottom:0;width:3px;border-radius:var(--r-md) 0 0 var(--r-md)}
+.after-metric-sm__label{font-size:11px;color:var(--ink-3);font-weight:500}
+.after-metric-sm__value{
+  font-family:var(--mono);font-size:20px;font-weight:700;
+  color:var(--ink);margin-top:var(--sp-4);letter-spacing:-0.02em;line-height:1.1;
+}
+.after-metric-sm__unit{font-size:11px;color:var(--ink-3);margin-left:2px;font-weight:400;font-family:'Inter',sans-serif}
+.after-metric-sm__sub{font-size:11px;color:var(--ink-2);margin-top:var(--sp-4)}
+
+/* === Competition Card: 개업/폐업/폐업률 한눈에 === */
+.after-compete-card{
+  background:var(--surface-2);border:1px solid var(--border-sub);
+  border-radius:var(--r-md);padding:var(--sp-16);
+}
+.after-compete-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-12)}
+.after-compete-title{font-size:12px;font-weight:600;color:var(--ink)}
+.after-compete-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--sp-8)}
+.after-compete-item{text-align:center;padding:var(--sp-8);background:var(--surface-3);border-radius:var(--r-sm)}
+.after-compete-item__label{font-size:10px;color:var(--ink-3);font-weight:500}
+.after-compete-item__value{font-family:var(--mono);font-size:18px;font-weight:700;margin-top:var(--sp-4);line-height:1}
+
+/* === Bar Distribution: 요일별 분포 === */
+.after-dist{
+  background:var(--surface-2);border:1px solid var(--border-sub);
+  border-radius:var(--r-md);padding:var(--sp-12) var(--sp-16);
+}
+.after-dist__title{font-size:11px;color:var(--ink-3);font-weight:500;margin-bottom:var(--sp-8)}
+.after-dist__bars{display:flex;gap:3px;align-items:flex-end;height:40px}
+.after-dist__col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.after-dist__fill{
+  width:100%;border-radius:3px 3px 0 0;
+  background:linear-gradient(180deg,rgba(0,0,128,0.6),rgba(0,0,128,0.15));
+  transition:background var(--motion);min-height:3px;
+}
+.after-dist__fill:hover{background:linear-gradient(180deg,rgba(0,0,128,0.8),rgba(0,0,128,0.3))}
+.after-dist__label{font-family:var(--mono);font-size:9px;color:var(--ink-3);font-weight:500}
+.after-dist__fill--peak{background:linear-gradient(180deg,var(--ochre),rgba(204,119,34,0.2))}
+.after-dist__fill--peak:hover{background:linear-gradient(180deg,var(--ochre),rgba(204,119,34,0.4))}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>K-CIA <b>Sidebar Briefing</b> — Rebuild Demo</h1>
+  <p>같은 데이터, 다른 구성 | analytical + editorial + trustworthy + decisive | Navy #000080 + Ochre #CC7722</p>
+</div>
+
+<div class="comparison">
+
+  <!-- ===== BEFORE ===== -->
+  <div class="panel">
+    <span class="panel-label panel-label--before">Current — 현재 사이드바</span>
+
+    <div class="before-sidebar">
+      <div class="before-header">
+        <div class="before-kicker">Area Briefing</div>
+        <h2 class="before-title">성수동 카페거리</h2>
+        <p class="before-sub">서울특별시 성동구</p>
+        <p class="before-desc">선택한 구역의 흐름, 경쟁, 리스크와 추천을 한 화면에서 요약합니다.</p>
+      </div>
+
+      <div class="before-content">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="before-badge">기준: 2024Q3</span>
+          <span style="font-size:10px;color:#6B6B82">2024-09-30</span>
+        </div>
+
+        <!-- Flow Card -->
+        <div class="before-card">
+          <div class="before-card-header">
+            <div class="before-card-title">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              유동인구
+            </div>
+            <span class="before-growth">+2.2%</span>
+          </div>
+          <div class="before-stat-row">
+            <span class="before-stat-label">분기 총 유동인구</span>
+            <span class="before-stat-value before-stat-value--highlight">1,284,500<span class="before-stat-unit">명</span></span>
+          </div>
+          <div class="before-mini-chart">
+            <div class="before-chart-bar" style="height:60%"></div>
+            <div class="before-chart-bar" style="height:45%"></div>
+            <div class="before-chart-bar" style="height:72%"></div>
+            <div class="before-chart-bar" style="height:68%"></div>
+            <div class="before-chart-bar" style="height:55%"></div>
+            <div class="before-chart-bar" style="height:80%"></div>
+            <div class="before-chart-bar" style="height:90%"></div>
+            <div class="before-chart-bar" style="height:85%"></div>
+          </div>
+          <div>
+            <p style="font-size:10px;color:#6B6B82;margin-top:12px;margin-bottom:4px">요일별 분포</p>
+            <div class="before-bar-dist">
+              <div class="before-bar-col"><div class="before-bar-fill" style="height:24px"></div><span class="before-bar-label">월</span></div>
+              <div class="before-bar-col"><div class="before-bar-fill" style="height:22px"></div><span class="before-bar-label">화</span></div>
+              <div class="before-bar-col"><div class="before-bar-fill" style="height:26px"></div><span class="before-bar-label">수</span></div>
+              <div class="before-bar-col"><div class="before-bar-fill" style="height:28px"></div><span class="before-bar-label">목</span></div>
+              <div class="before-bar-col"><div class="before-bar-fill" style="height:32px"></div><span class="before-bar-label">금</span></div>
+              <div class="before-bar-col"><div class="before-bar-fill" style="height:40px"></div><span class="before-bar-label">토</span></div>
+              <div class="before-bar-col"><div class="before-bar-fill" style="height:36px"></div><span class="before-bar-label">일</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sales Card -->
+        <div class="before-card">
+          <div class="before-card-header">
+            <div class="before-card-title">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              매출
+            </div>
+            <span class="before-growth before-growth--neg">-1.8%</span>
+          </div>
+          <div class="before-stat-row">
+            <span class="before-stat-label">분기 총 매출</span>
+            <span class="before-stat-value before-stat-value--highlight">42,850<span class="before-stat-unit">만원</span></span>
+          </div>
+          <div class="before-stat-row">
+            <span class="before-stat-label">결제 건수</span>
+            <span class="before-stat-value">18,420<span class="before-stat-unit">건</span></span>
+          </div>
+        </div>
+
+        <!-- Competition Card -->
+        <div class="before-card">
+          <div class="before-card-header">
+            <div class="before-card-title">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+              경쟁 현황
+            </div>
+            <span class="before-growth">+3.1%</span>
+          </div>
+          <div class="before-stat-row">
+            <span class="before-stat-label">점포 수</span>
+            <span class="before-stat-value before-stat-value--highlight">127<span class="before-stat-unit">개</span></span>
+          </div>
+          <div class="before-compete-grid">
+            <div class="before-compete-item"><p>개업</p><p class="up">+12</p></div>
+            <div class="before-compete-item"><p>폐업</p><p class="down">-8</p></div>
+            <div class="before-compete-item"><p>폐업률</p><p>6.3%</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== AFTER ===== -->
+  <div class="panel">
+    <span class="panel-label panel-label--after">Rebuild — 스펙 기반 재구성</span>
+
+    <div class="after-sidebar">
+      <div class="after-header">
+        <div class="after-header-top">
+          <span class="after-kicker">Area Briefing</span>
+          <span class="after-qtr-badge">2024 Q3</span>
+        </div>
+        <h2 class="after-area-name">성수동 카페거리</h2>
+        <p class="after-area-sub">서울특별시 성동구 &bull; 2024-09-30 기준</p>
+      </div>
+
+      <div class="after-content">
+
+        <!-- Hero Metric: 가장 중요한 유동인구를 크게 -->
+        <div class="after-hero-metric">
+          <div class="after-hero-label">분기 유동인구</div>
+          <div class="after-hero-row">
+            <span class="after-hero-value">1,284,500</span>
+            <span class="after-hero-unit">명</span>
+            <span class="after-hero-growth after-hero-growth--up">+2.2%</span>
+          </div>
+          <div class="after-hero-chart">
+            <div class="after-hero-chart-bar" style="height:60%"></div>
+            <div class="after-hero-chart-bar" style="height:45%"></div>
+            <div class="after-hero-chart-bar" style="height:72%"></div>
+            <div class="after-hero-chart-bar" style="height:68%"></div>
+            <div class="after-hero-chart-bar" style="height:55%"></div>
+            <div class="after-hero-chart-bar" style="height:80%"></div>
+            <div class="after-hero-chart-bar" style="height:90%"></div>
+            <div class="after-hero-chart-bar" style="height:85%"></div>
+          </div>
+        </div>
+
+        <!-- 보조 지표: 2열 compact -->
+        <div class="after-metrics-row">
+          <div class="after-metric-sm">
+            <div class="after-metric-sm__bar" style="background:var(--ochre)"></div>
+            <div class="after-metric-sm__label">분기 매출</div>
+            <div class="after-metric-sm__value">42,850<span class="after-metric-sm__unit">만원</span></div>
+            <div class="after-metric-sm__sub" style="color:var(--danger)">-1.8% QoQ</div>
+          </div>
+          <div class="after-metric-sm">
+            <div class="after-metric-sm__bar" style="background:var(--ochre)"></div>
+            <div class="after-metric-sm__label">결제 건수</div>
+            <div class="after-metric-sm__value">18,420<span class="after-metric-sm__unit">건</span></div>
+            <div class="after-metric-sm__sub">건당 23,263원</div>
+          </div>
+        </div>
+
+        <!-- 경쟁 현황: 한눈에 보이는 그리드 -->
+        <div class="after-compete-card">
+          <div class="after-compete-header">
+            <span class="after-compete-title">경쟁 현황</span>
+            <span class="after-hero-growth after-hero-growth--up" style="font-size:11px;padding:2px 8px">+3.1%</span>
+          </div>
+          <div class="after-compete-grid">
+            <div class="after-compete-item">
+              <div class="after-compete-item__label">점포 수</div>
+              <div class="after-compete-item__value" style="color:var(--ink)">127</div>
+            </div>
+            <div class="after-compete-item">
+              <div class="after-compete-item__label">개업</div>
+              <div class="after-compete-item__value" style="color:var(--sage)">+12</div>
+            </div>
+            <div class="after-compete-item">
+              <div class="after-compete-item__label">폐업</div>
+              <div class="after-compete-item__value" style="color:var(--danger)">-8</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 요일별 분포: 피크 강조 -->
+        <div class="after-dist">
+          <div class="after-dist__title">요일별 유동인구 분포</div>
+          <div class="after-dist__bars">
+            <div class="after-dist__col"><div class="after-dist__fill" style="height:60%"></div><span class="after-dist__label">월</span></div>
+            <div class="after-dist__col"><div class="after-dist__fill" style="height:55%"></div><span class="after-dist__label">화</span></div>
+            <div class="after-dist__col"><div class="after-dist__fill" style="height:65%"></div><span class="after-dist__label">수</span></div>
+            <div class="after-dist__col"><div class="after-dist__fill" style="height:70%"></div><span class="after-dist__label">목</span></div>
+            <div class="after-dist__col"><div class="after-dist__fill" style="height:80%"></div><span class="after-dist__label">금</span></div>
+            <div class="after-dist__col"><div class="after-dist__fill after-dist__fill--peak" style="height:100%"></div><span class="after-dist__label" style="color:var(--ochre)">토</span></div>
+            <div class="after-dist__col"><div class="after-dist__fill after-dist__fill--peak" style="height:90%"></div><span class="after-dist__label" style="color:var(--ochre)">일</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

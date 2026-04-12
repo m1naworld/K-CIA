@@ -3,6 +3,7 @@
 # K-CIA Lite — 데이터 기획문서 (공공데이터 중심)
 
 작성일: 2026-01-30
+최종 수정: 2026-02-13
 
 > 본 문서는 데이터 소스/스키마/파이프라인/LLM 오케스트레이션/검증에 집중합니다. 유저 시나리오는 별도 문서로 분리합니다.
 > 
@@ -20,6 +21,13 @@
 > 
 > - 기본 프리셋은 **행정동(성수1가1동/성수1가2동/성수2가1동/성수2가3동)** ∪ **골목상권(연무장길/성수역/뚝섬역 주변 상권코드)** 형태로 제공
 > 
+
+### 현재 진행 상태 (2026-02-13)
+
+- **적재 완료**: D1/D2/D3/D5/D9/D11 기본 테이블 적재 및 검증
+- **스키마 확정**: dim_area/dim_category + fact_sales/flow/store + bridge_area_h3_weight
+- **확장 완료**: D8 집객시설, SNS 모듈(M9) 스키마/파이프라인 추가
+- **Phase 2 분석**: 피크타임/리스크 산출용 JSONB 및 리스크 스코어 계산 로직 반영
 
 ### 3.1 필수 1순위 (수요/경쟁/공간)
 
@@ -52,9 +60,9 @@
 - **D4 상주인구(행정동)**: 상권분석서비스(상주인구-행정동)
     - 링크: https://data.seoul.go.kr/dataList/OA-22183/S/1/datasetView.do
     - 키: `기준_년분기_코드`, `행정동_코드`
-- **D8 집객시설(상권배후지)**: 상권분석서비스(집객시설-상권배후지)
-    - 링크: https://data.seoul.go.kr/dataList/OA-15581/S/1/datasetView.do
-    - 키: `기준_년분기_코드`, `상권배후지_코드`
+- **D8 집객시설(상권)**: 상권분석서비스(집객시설-상권)
+    - 링크: https://data.seoul.go.kr/dataList/OA-15580/S/1/datasetView.do
+    - 키: `기준_년분기_코드`, `상권_코드`
 - **D10 임대(대체 지표)**: 서울교통공사 지하상가임대정보(월임대료 등)
     - 링크: https://data.seoul.go.kr/dataList/OA-12927/F/1/datasetView.do
     - 키: 역/상가 단위(상권과는 공간 조인으로 연결)
@@ -85,6 +93,7 @@
 ### Y1) 소스/수집 단위
 
 - **YouTube Data API v3**: 검색(키워드), 영상 메타데이터, 댓글(또는 일부) 수집
+- **Naver Search API (Blog/Cafe)**: 키워드 기반 콘텐츠 수집
 - **수집 주기**: 1일 1회(기본) + 선택(6시간 단위)
 - **스코프**: 기본은 “성수동 범위(지역 스코프)” 레벨 집계
     - 고도화: 장소/POI 단서(지오태그·장소명·텍스트 언급)를 이용해 **H3 매핑** 시도
@@ -99,8 +108,8 @@
 
 - **기본(안전)**: `scope=성수동`(행정동/상권코드 집합)로만 귀속 → 지도는 “범위 스코프 카드”로 표시
 - **고도화(가능 시)**:
-    1. 지오태그/위치 메타 → 좌표 → H3
-    2. 텍스트에서 POI·역명·거리 NER → POI 테이블 매칭 → 좌표 → H3
+    1. 주소/상호 → Kakao Local 지오코딩 → 좌표 → 상권 폴리곤 매핑
+    2. 지오태그/위치 메타 → 좌표 → H3
     3. 불확실하면 “H3 미귀속(스코프만)”로 남겨 오표기 방지
 
 ### Y4) 집계 로직(일 단위)
@@ -142,6 +151,8 @@
 - **fact_store_area_qtr**: `area_id`, `qtr`, `cat_id`, `store_cnt`, `open_cnt`, `close_cnt`
 - **fact_realtime_congestion_area**(옵션): `area_id`, `ts`, `congestion_level`, `ppltn_min/max`
 - **bridge_area_h3_weight**: `area_id`, `h3_index`, `weight` (폴리곤→H3 커버 결과)
+- **fact_social_trend_daily**(옵션): `trend_id`, `area_id`, `source`, `collected_date`, `keyword`, `buzz_volume`, `sentiment_score`, `top_keywords`, `evidence_snippets`
+- **social_module_config**(옵션): `config_key`, `config_value`, `updated_at`
 - (P4용) **dim_asset**(옵션): `asset_id`, `address`, `lat/lng`, `owner_portfolio_tag`
 - (P4용) **fact_deal_price_month**(옵션): `law_code5`, `yyyymm`, `price_per_sqm_p50/p75`, `n_deals`
 
